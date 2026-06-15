@@ -1,0 +1,3 @@
+# Site estático (PWA) — publica a raiz do repositório, sem etapa de build.
+[build]
+  publish = "."
