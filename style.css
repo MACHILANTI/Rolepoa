@@ -1869,6 +1869,8 @@ select.form-control {
   .restaurants-grid {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
+    /* TESTE: cards reduzidos (proporção mantida). Remover o zoom volta ao normal. */
+    zoom: 0.78;
   }
   .card-image-wrapper { height: 215px; }
   .card-title { font-size: 19px; }

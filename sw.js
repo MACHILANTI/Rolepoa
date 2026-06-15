@@ -1,4 +1,4 @@
-const CACHE_NAME = 'role-poa-v45';
+const CACHE_NAME = 'role-poa-v49';
 const ASSETS = [
   './',
   './index.html',
