@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#120E0B">
+  <title>RolêPOA 🍷 — Seu guia gastronômico</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RolêPOA">
+  <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+
+  <!-- ===== TOPBAR (mobile) ===== -->
+  <div class="topbar">
+    <button class="icon-btn" onclick="toggleSidebar()" title="Filtros">☰</button>
+    <h1 class="logo">RolêPOA <span>🍷</span></h1>
+    <div class="topbar-actions">
+      <button class="icon-btn" onclick="openRandomPick()" title="Sortear lugar">🎲</button>
+      <button class="icon-btn" onclick="openMenu()" title="Menu">⋯</button>
+    </div>
+  </div>
+
+  <!-- ===== APP SHELL: SIDEBAR + CONTEÚDO ===== -->
+  <div class="app-shell">
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h1 class="logo">RolêPOA <span>🍷</span></h1>
+        <div class="sidebar-brand-actions">
+          <button class="icon-btn" onclick="openRandomPick()" title="Sortear lugar">🎲</button>
+          <button class="icon-btn" onclick="openMenu()" title="Menu">⋯</button>
+        </div>
+      </div>
+
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="search-input" class="search-input" placeholder="Buscar lugar, bairro..." autocomplete="off" oninput="onSearchInput(this.value)">
+        <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none">×</button>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Status</div>
+        <div class="filters">
+          <button class="filter-btn active" data-status="todos" onclick="filterStatus('todos', this)">Todos</button>
+          <button class="filter-btn" data-status="para-conhecer" onclick="filterStatus('para-conhecer', this)">📌 Para Conhecer</button>
+          <button class="filter-btn" data-status="ja-fui" onclick="filterStatus('ja-fui', this)">✅ Já Fui</button>
+          <button class="filter-btn" data-status="favoritos" onclick="filterStatus('favoritos', this)">❤️ Favoritos</button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Refinar</div>
+        <select id="filter-categoria" class="mini-select" onchange="render()">
+          <option value="">Todas categorias</option>
+        </select>
+        <select id="filter-bairro" class="mini-select" onchange="render()">
+          <option value="">Todos bairros</option>
+        </select>
+        <select id="sort-by" class="mini-select" onchange="render()">
+          <option value="recent">Mais recentes</option>
+          <option value="rating">Melhor avaliados</option>
+          <option value="name">A–Z</option>
+          <option value="bairro">Por bairro</option>
+        </select>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Resumo</div>
+        <div class="quick-stats">
+          <div class="stat-item"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Salvos</div></div>
+          <div class="stat-item"><div class="stat-val" id="stat-todo" style="color: var(--secondary)">0</div><div class="stat-lbl">Conhecer</div></div>
+          <div class="stat-item"><div class="stat-val" id="stat-visited" style="color: var(--success)">0</div><div class="stat-lbl">Já Fui</div></div>
+          <div class="stat-item"><div class="stat-val" id="stat-avg" style="color: var(--primary)">—</div><div class="stat-lbl">Nota Média</div></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== CONTEÚDO PRINCIPAL (cards) ===== -->
+    <div class="content">
+      <main>
+        <div class="view-bar">
+          <h2 class="section-title" id="section-title">Todos os Lugares</h2>
+          <div class="view-toggle">
+            <button class="active" data-view="list" onclick="setView('list')">📋 Lista</button>
+            <button data-view="map" onclick="setView('map')">🗺️ Mapa</button>
+          </div>
+        </div>
+
+        <div id="list-view">
+          <div class="restaurants-grid" id="restaurants-grid"></div>
+        </div>
+
+        <div id="map-view" style="display:none;">
+          <div class="map-split">
+            <div id="map"></div>
+            <div class="map-list" id="map-list"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ===== FAB ADICIONAR ===== -->
+  <button class="fab" onclick="openAddModal()" title="Adicionar lugar">
+    <span class="fab-icon">+</span>
+    <span class="fab-label">Adicionar Lugar</span>
+  </button>
+
+  <!-- ===== MODAL: ADICIONAR / EDITAR ===== -->
+  <div class="modal" id="modal-add">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-add-title">Adicionar Lugar</h3>
+        <button class="modal-close" onclick="closeAddModal()">×</button>
+      </div>
+
+      <form id="form-restaurant" onsubmit="saveRestaurant(event)">
+        <input type="hidden" id="edit-id">
+
+        <!-- ===== PREENCHIMENTO INTELIGENTE ===== -->
+        <div class="smart-fill" id="smart-fill">
+          <label class="form-label">⚡ Preenchimento inteligente</label>
+          <div class="smart-input-row">
+            <input type="text" id="smart-query" class="form-control"
+                   placeholder="Cole o @ do Instagram ou o nome (ex: @agridocecafe)"
+                   autocomplete="off"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();runSmartSearch();}">
+            <button type="button" class="btn-smart" onclick="runSmartSearch()">🔍 Buscar</button>
+          </div>
+          <span class="hint">Achamos nome, endereço, bairro, categoria, telefone e site automaticamente. Conecte o Google pra trazer também foto, nota e faixa de preço.</span>
+          <div id="google-status" class="google-status"></div>
+          <div id="smart-results" class="smart-results"></div>
+          <div id="smart-confirm" class="smart-confirm"></div>
+        </div>
+
+        <div class="add-grid">
+        <div class="form-group fg-nome">
+          <label class="form-label">Nome do Restaurante *</label>
+          <div class="autocomplete-wrapper">
+            <input type="text" id="input-name" class="form-control" placeholder="Digite e veja sugestões (ex: Agridoce, Severo...)" required autocomplete="off" oninput="onNameInput(this.value)" onfocus="onNameInput(this.value)" onblur="setTimeout(closeAutocomplete, 200)">
+            <div id="autocomplete-list" class="autocomplete-list"></div>
+          </div>
+          <button type="button" class="action-btn small" onclick="searchInstagram()" style="margin-top:8px; width:100%;">📷 Buscar no Instagram</button>
+        </div>
+
+        <div class="form-group fg-map" id="map-preview-wrapper" style="display:none;">
+          <label class="form-label">📍 Localização no Mapa</label>
+          <div class="map-frame">
+            <iframe id="map-preview" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          </div>
+          <span class="hint">Mapa preview do lugar — se não estiver no mapa correto, ajuste o nome ou escolha uma sugestão "🗺️".</span>
+        </div>
+
+          <div class="form-group fg-bairro">
+            <label class="form-label">Bairro</label>
+            <select id="input-bairro" class="form-control">
+              <option value="Bom Fim">Bom Fim</option>
+              <option value="Cidade Baixa">Cidade Baixa</option>
+              <option value="Moinhos de Vento">Moinhos de Vento</option>
+              <option value="Auxiliadora">Auxiliadora</option>
+              <option value="Menino Deus">Menino Deus</option>
+              <option value="Rio Branco">Rio Branco</option>
+              <option value="Centro Histórico">Centro Histórico</option>
+              <option value="Três Figueiras">Três Figueiras</option>
+              <option value="Petrópolis">Petrópolis</option>
+              <option value="Floresta">Floresta</option>
+              <option value="Higienópolis">Higienópolis</option>
+              <option value="Bela Vista">Bela Vista</option>
+              <option value="Independência">Independência</option>
+              <option value="Montserrat">Montserrat</option>
+              <option value="Boa Vista">Boa Vista</option>
+              <option value="Passo d'Areia">Passo d'Areia</option>
+              <option value="Praia de Belas">Praia de Belas</option>
+              <option value="Santana">Santana</option>
+              <option value="Jardim Botânico">Jardim Botânico</option>
+              <option value="Chácara das Pedras">Chácara das Pedras</option>
+              <option value="Cavalhada">Cavalhada</option>
+              <option value="Ipanema">Ipanema</option>
+              <option value="Teresópolis">Teresópolis</option>
+              <option value="Glória">Glória</option>
+              <option value="Partenon">Partenon</option>
+              <option value="Cristal">Cristal</option>
+              <option value="Medianeira">Medianeira</option>
+              <option value="Nonoai">Nonoai</option>
+              <option value="Tristeza">Tristeza</option>
+              <option value="Vila Assunção">Vila Assunção</option>
+              <option value="Navegantes">Navegantes</option>
+              <option value="São Geraldo">São Geraldo</option>
+              <option value="Azenha">Azenha</option>
+              <option value="Farroupilha">Farroupilha</option>
+              <option value="Jardim do Salso">Jardim do Salso</option>
+              <option value="Jardim Itu-Sabará">Jardim Itu-Sabará</option>
+              <option value="Jardim Lindóia">Jardim Lindóia</option>
+              <option value="Vila Ipiranga">Vila Ipiranga</option>
+              <option value="Cristo Redentor">Cristo Redentor</option>
+              <option value="São João">São João</option>
+              <option value="Sarandi">Sarandi</option>
+              <option value="Rubem Berta">Rubem Berta</option>
+              <option value="Zona Sul">Zona Sul</option>
+              <option value="Outro">Outro Bairro</option>
+            </select>
+          </div>
+
+          <div class="form-group fg-categoria">
+            <label class="form-label">Categoria</label>
+            <select id="input-categoria" class="form-control">
+              <option value="Hambúrguer">🍔 Hambúrguer</option>
+              <option value="Pizza">🍕 Pizza</option>
+              <option value="Italiano">🍝 Italiano</option>
+              <option value="Japonês">🍣 Japonês</option>
+              <option value="Café">☕ Café</option>
+              <option value="Pub">🍺 Pub / Bar</option>
+              <option value="Carnes">🥩 Carnes</option>
+              <option value="Brasileiro">🇧🇷 Brasileiro</option>
+              <option value="Vegetariano">🥗 Vegetariano</option>
+              <option value="Doceria">🍰 Doceria</option>
+              <option value="Outro">🍽️ Outro</option>
+            </select>
+          </div>
+
+        <div class="form-group fg-preco">
+          <label class="form-label">Faixa de Preço</label>
+          <div class="price-picker" id="price-picker">
+            <button type="button" class="price-opt" data-price="$">$<small>até R$50</small></button>
+            <button type="button" class="price-opt" data-price="$$">$$<small>R$50–100</small></button>
+            <button type="button" class="price-opt" data-price="$$$">$$$<small>R$100–200</small></button>
+            <button type="button" class="price-opt" data-price="$$$$">$$$$<small>R$200+</small></button>
+          </div>
+          <input type="hidden" id="input-price" value="$$">
+        </div>
+
+        <div class="form-group fg-insta">
+          <label class="form-label">📷 Instagram (perfil)</label>
+          <input type="text" id="input-instagram" class="form-control" placeholder="@perfil ou link do Instagram" autocomplete="off">
+          <span class="hint">Vai no botão "Instagram" do card e leva direto ao perfil do lugar.</span>
+        </div>
+
+        <div class="form-group fg-reels">
+          <label class="form-label">🎬 Reels (opcional)</label>
+          <input type="url" id="input-reels" class="form-control" placeholder="https://www.instagram.com/reel/..." autocomplete="off">
+          <span class="hint">Cole o link de um Reels específico. Só então o botão "Reels" do card fica ativo.</span>
+        </div>
+
+        <div class="form-group fg-foto">
+          <label class="form-label">Foto do Lugar</label>
+          <div class="photo-upload">
+            <div class="photo-preview" id="photo-preview">
+              <span>📷 Sem foto</span>
+            </div>
+            <div class="photo-actions">
+              <label for="input-photo-file" class="action-btn small">📂 Arquivo</label>
+              <input type="file" id="input-photo-file" accept="image/*" style="display:none" onchange="onPhotoFile(event)">
+              <button type="button" class="action-btn small" onclick="togglePhotoUrl()">🔗 URL</button>
+              <button type="button" class="action-btn small" onclick="clearPhoto()">🗑️</button>
+            </div>
+          </div>
+          <input type="url" id="input-photo" class="form-control" placeholder="https://..." autocomplete="off" style="display:none; margin-top:10px;" oninput="updatePhotoPreview(this.value)">
+          <span class="hint">Deixe em branco para usar a foto padrão da categoria.</span>
+        </div>
+
+        <div class="form-group fg-notes">
+          <label class="form-label">Observações Iniciais</label>
+          <textarea id="input-notes" class="form-control" rows="2" placeholder="Recomendação de quem, evento, prato que quero provar..."></textarea>
+        </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" onclick="closeAddModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: AVALIAR ===== -->
+  <div class="modal" id="modal-rate">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Como foi o Rolê? 🍷</h3>
+        <button class="modal-close" onclick="closeRateModal()">×</button>
+      </div>
+
+      <form id="form-rate" onsubmit="saveRating(event)">
+        <input type="hidden" id="rate-id">
+
+        <div class="form-group">
+          <label class="form-label">Data da visita</label>
+          <input type="date" id="rate-date" class="form-control">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header"><span>🍕 Comida</span><span class="score-val" id="val-comida">5.0 🌟</span></div>
+          <input type="range" id="slide-comida" class="score-slider" min="1" max="5" step="0.5" value="5" oninput="updateSliderVal('comida', this.value)">
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><span>🕯️ Ambiente</span><span class="score-val" id="val-ambiente">5.0 🌟</span></div>
+          <input type="range" id="slide-ambiente" class="score-slider" min="1" max="5" step="0.5" value="5" oninput="updateSliderVal('ambiente', this.value)">
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><span>🧑‍🍳 Atendimento</span><span class="score-val" id="val-atendimento">5.0 🌟</span></div>
+          <input type="range" id="slide-atendimento" class="score-slider" min="1" max="5" step="0.5" value="5" oninput="updateSliderVal('atendimento', this.value)">
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><span>💸 Preço-benefício</span><span class="score-val" id="val-preco">5.0 🌟</span></div>
+          <input type="range" id="slide-preco" class="score-slider" min="1" max="5" step="0.5" value="5" oninput="updateSliderVal('preco', this.value)">
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><span>📍 Localização</span><span class="score-val" id="val-localizacao">5.0 🌟</span></div>
+          <input type="range" id="slide-localizacao" class="score-slider" min="1" max="5" step="0.5" value="5" oninput="updateSliderVal('localizacao', this.value)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Comentários e Destaques</label>
+          <textarea id="input-comments" class="form-control" rows="3" placeholder="Ex: peça a batata frita trufada, vale muito a pena!"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" onclick="closeRateModal()">Cancelar</button>
+          <button type="submit" class="btn-primary success">Confirmar Avaliação</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: DETALHES ===== -->
+  <div class="modal" id="modal-detail">
+    <div class="modal-content" id="modal-detail-content">
+      <!-- preenchido por JS -->
+    </div>
+  </div>
+
+  <!-- ===== MODAL: SORTEIO ===== -->
+  <div class="modal" id="modal-random">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">🎲 Para onde hoje?</h3>
+        <button class="modal-close" onclick="closeRandomPick()">×</button>
+      </div>
+      <div id="random-result" style="text-align:center; padding: 12px 0 24px;">
+        <p style="color: var(--text-muted); margin-bottom: 16px;">Quer que eu escolha por você?</p>
+        <div class="random-filters">
+          <label class="check-row"><input type="checkbox" id="random-only-todo" checked> Apenas "Para Conhecer"</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeRandomPick()">Fechar</button>
+        <button class="btn-primary" id="random-roll-btn" onclick="doRandomPick()">🎲 Sortear!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: MENU ===== -->
+  <div class="modal" id="modal-menu">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Menu</h3>
+        <button class="modal-close" onclick="closeMenu()">×</button>
+      </div>
+      <div class="menu-list">
+        <button class="menu-item" onclick="exportData()">
+          <span class="menu-icon">📥</span>
+          <div><strong>Exportar dados</strong><small>Baixar backup JSON</small></div>
+        </button>
+        <label class="menu-item" for="import-input">
+          <span class="menu-icon">📤</span>
+          <div><strong>Importar dados</strong><small>Restaurar de um backup</small></div>
+        </label>
+        <input type="file" id="import-input" accept="application/json,.json" style="display:none" onchange="importData(event)">
+        <button class="menu-item" onclick="openBookmarkletInfo()" style="background: linear-gradient(135deg, rgba(245,166,35,0.08), rgba(224,90,71,0.08)); border: 1px dashed rgba(245,166,35,0.3);">
+          <span class="menu-icon">✨</span>
+          <div><strong>Importador Instagram</strong><small>Salvar direto do Insta com 1 clique</small></div>
+        </button>
+        <button class="menu-item" onclick="openStats()">
+          <span class="menu-icon">📊</span>
+          <div><strong>Estatísticas</strong><small>Resumo do seu paladar</small></div>
+        </button>
+        <button class="menu-item danger" onclick="clearAllData()">
+          <span class="menu-icon">⚠️</span>
+          <div><strong>Apagar tudo</strong><small>Limpa todos os lugares</small></div>
+        </button>
+      </div>
+      <p class="menu-foot">RolêPOA · v2.0 · Feito com 🧡 em Porto Alegre</p>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: BOOKMARKLET INFO ===== -->
+  <div class="modal" id="modal-bookmarklet">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✨ Importador Automático</h3>
+        <button class="modal-close" onclick="closeBookmarkletInfo()">×</button>
+      </div>
+      <div style="padding: 10px 0 16px;">
+        <p style="font-size:13.5px; line-height: 1.6; color: var(--text-muted); margin-bottom: 20px;">
+          Adicione um botão mágico aos seus favoritos! Quando você estiver no perfil de um restaurante no Instagram, clique nele para <strong>importar nome, foto, link e bairro automaticamente</strong> para cá.
+        </p>
+        
+        <div style="background: rgba(245, 166, 35, 0.04); border: 1px dashed rgba(245,166,35,0.25); border-radius: 14px; padding: 20px 16px; text-align: center; margin-bottom: 24px;">
+          <label style="display:block; font-size:11px; color: var(--text-muted); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;">1. Arraste este botão para a Barra de Favoritos:</label>
+          <a id="bookmarklet-link" href="#" onclick="event.preventDefault(); alert('Arraste este botão para a sua barra de favoritos do navegador (Ctrl+Shift+B se ela estiver oculta)!')" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #120e0b; text-decoration: none; border-radius: 30px; font-weight: 800; font-size: 14px; box-shadow: 0 6px 20px rgba(245,166,35,0.25); transition: transform 0.2s; cursor: grab;">➕ Importar p/ RolêPOA</a>
+        </div>
+
+        <div style="font-size:13px; line-height: 1.6; color: var(--text-muted); background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+          <strong style="color: var(--text); display: block; margin-bottom: 8px;">Como instalar e usar no Computador:</strong>
+          <ol style="padding-left: 20px; display: flex; flex-direction: column; gap: 6px;">
+            <li>Exiba a barra de favoritos do seu navegador usando <code>Ctrl + Shift + B</code> (ou <code>Cmd + Shift + B</code> no Mac).</li>
+            <li>Arraste o botão colorido acima diretamente para a sua barra de favoritos.</li>
+            <li>Acesse o Instagram de qualquer restaurante de Porto Alegre no navegador.</li>
+            <li>Clique no favorito <strong>"➕ Importar p/ RolêPOA"</strong> e a aba abrirá o app com todos os dados preenchidos prontos para salvar!</li>
+          </ol>
+        </div>
+      </div>
+      <div class="modal-footer" style="margin-top: 12px;">
+        <button class="btn-primary" onclick="closeBookmarkletInfo()" style="width: 100%;">Entendido!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: STATS ===== -->
+  <div class="modal" id="modal-stats">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">📊 Suas Estatísticas</h3>
+        <button class="modal-close" onclick="closeStats()">×</button>
+      </div>
+      <div id="stats-content"></div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: CONFIRMAÇÃO ===== -->
+  <div class="modal" id="modal-confirm">
+    <div class="modal-content" style="max-width: 380px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="confirm-title">Confirmar</h3>
+      </div>
+      <p id="confirm-message" style="color: var(--text-muted); margin-bottom: 24px;"></p>
+      <div class="modal-footer">
+        <button class="btn-ghost" id="confirm-cancel">Cancelar</button>
+        <button class="btn-primary danger" id="confirm-ok">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST CONTAINER ===== -->
+  <div id="toast-container"></div>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

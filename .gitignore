@@ -1,0 +1,13 @@
+# App mobile (projeto Expo separado, com repo próprio)
+mobile/
+
+# Backups e ferramentas locais
+.ui-backup/
+.claude/
+.expo/
+
+# Dependências / sistema
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
