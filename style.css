@@ -670,6 +670,20 @@ main {
   border-left: 2px solid var(--primary);
   padding: 4px 0 4px 10px;
 }
+/* Notas por pessoa no card (Marcelo / Andressa) */
+.rater-chips {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 10px;
+}
+.rater-chip {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.rater-chip strong { color: var(--primary); }
 
 /* ===== FAB ===== */
 .fab {
@@ -1351,6 +1365,53 @@ select.form-control {
 .detail-rate-avg-wrap { font-size: 13px; color: var(--text-muted); font-weight: 600; }
 .detail-rate-avg-wrap strong { color: var(--primary); font-size: 17px; }
 
+/* Bloco da MÉDIA FINAL (média Marcelo + Andressa) */
+.final-rate {
+  display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(135deg, rgba(245,166,35,0.14), rgba(224,90,71,0.10));
+  border: 1px solid rgba(245,166,35,0.30);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.final-rate-big {
+  font-size: 26px; font-weight: 800;
+  color: var(--primary);
+  line-height: 1; white-space: nowrap;
+}
+.final-rate-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.final-rate-people { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; margin-top: 3px; }
+.final-rate-people strong { color: var(--text); }
+
+/* Abas de pessoa (Marcelo / Andressa) */
+.rater-tabs {
+  display: flex; gap: 8px;
+  margin: 10px 0 4px;
+}
+.rater-tab {
+  flex: 1;
+  cursor: pointer;
+  font-size: 13.5px; font-weight: 700;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 10px;
+  transition: all 0.15s ease;
+}
+.rater-tab:hover { color: var(--text); }
+.rater-tab.active {
+  color: #2a1208;
+  background: linear-gradient(100deg, #ffd87a, var(--primary));
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(245,166,35,0.35);
+}
+.rater-tab-avg {
+  font-weight: 800;
+  opacity: 0.85;
+  margin-left: 2px;
+}
+
 .rate-row {
   display: flex;
   justify-content: space-between;
@@ -1847,7 +1908,7 @@ select.form-control {
 .random-toggle input { width: 17px; height: 17px; accent-color: var(--primary); cursor: pointer; }
 
 /* Confetes */
-.confetti-layer { position: fixed; inset: 0; pointer-events: none; z-index: 300; overflow: hidden; }
+.confetti-layer { position: fixed; inset: 0; pointer-events: none; z-index: 3000; overflow: hidden; }
 .confetti-piece {
   position: absolute;
   top: 44%;
@@ -1921,3 +1982,200 @@ select.form-control {
     margin-bottom: 18px;
   }
 }
+
+/* ===== TELA DE BOAS-VINDAS ===== */
+.welcome-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background: radial-gradient(ellipse at 50% 30%, rgba(120, 40, 20, 0.4), rgba(8,6,5,0.97));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.welcome-overlay.show { opacity: 1; }
+.welcome-overlay.drive {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+.welcome-card {
+  position: relative; overflow: hidden;
+  background: linear-gradient(160deg, #1f1410, #160f0a);
+  border: 1px solid rgba(245,166,35,0.25);
+  border-radius: 28px;
+  padding: 36px 30px 28px;
+  max-width: 360px; width: 100%;
+  text-align: center;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.06);
+  cursor: pointer;
+  transform: scale(0.7) translateY(24px); opacity: 0;
+  user-select: none;
+}
+.welcome-overlay.show .welcome-card {
+  animation: wCardIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+}
+@keyframes wCardIn {
+  0%   { transform: scale(0.7) translateY(24px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.welcome-overlay.drive .welcome-card {
+  animation: wCardOut 0.55s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes wCardOut {
+  0%   { transform: scale(1) translateY(0); opacity: 1; }
+  100% { transform: scale(0.85) translateY(16px); opacity: 0; }
+}
+
+/* Glow girando atrás */
+.welcome-glow {
+  position: absolute; inset: -60% -20%;
+  background: conic-gradient(from 0deg,
+    rgba(180,50,30,0.18), rgba(245,166,35,0.14),
+    rgba(155,26,58,0.20), rgba(245,166,35,0.10),
+    rgba(180,50,30,0.18));
+  filter: blur(40px);
+  animation: glowSpin 10s linear infinite;
+  z-index: 0; pointer-events: none;
+}
+@keyframes glowSpin { to { transform: rotate(360deg); } }
+.welcome-card > *:not(.welcome-glow) { position: relative; z-index: 1; }
+
+/* Textos */
+.welcome-title {
+  font-family: var(--font-display);
+  font-size: 26px; font-weight: 800;
+  background: linear-gradient(100deg, #ffd87a, var(--primary), #e05a47, #ffd87a);
+  background-size: 280% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3.5s linear infinite;
+  margin-bottom: 6px;
+}
+@keyframes shimmer { to { background-position: 280% 0; } }
+
+.welcome-sub {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin-bottom: 0;
+}
+
+/* ===== MEDALHÃO PÔR DO SOL DO GUAÍBA ===== */
+.welcome-badge {
+  position: relative;
+  width: 150px; height: 150px;
+  margin: 18px auto 16px;
+  filter: drop-shadow(0 12px 30px rgba(255,120,60,0.35));
+  animation: badgeFloat 4s ease-in-out infinite;
+}
+@keyframes badgeFloat {
+  0%, 100% { transform: translateY(0) rotate(-0.5deg); }
+  50%      { transform: translateY(-7px) rotate(0.5deg); }
+}
+.sunset-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+
+/* halo pulsando atrás do medalhão */
+.welcome-badge::before {
+  content: "";
+  position: absolute; inset: -16px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,160,80,0.35), rgba(255,160,80,0) 70%);
+  animation: haloPulse 2.6s ease-in-out infinite;
+  z-index: -1;
+}
+@keyframes haloPulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.55; }
+  50%      { transform: scale(1.08); opacity: 0.9; }
+}
+
+.sun { animation: sunGlow 2.8s ease-in-out infinite; transform-origin: 100px 94px; }
+@keyframes sunGlow {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+.sun-rays { transform-origin: 100px 100px; animation: raysSpin 24s linear infinite; }
+@keyframes raysSpin { to { transform: rotate(360deg); } }
+.birds { animation: birdsFly 6s ease-in-out infinite; }
+@keyframes birdsFly {
+  0%   { transform: translate(0,0); opacity: 0.6; }
+  50%  { transform: translate(14px,-6px); opacity: 0.85; }
+  100% { transform: translate(28px,-2px); opacity: 0; }
+}
+.rf { animation: rfShimmer 2.2s ease-in-out infinite; }
+.rf.r2 { animation-delay: 0.3s; }
+.rf.r3 { animation-delay: 0.6s; }
+.rf.r4 { animation-delay: 0.9s; }
+.rf.r5 { animation-delay: 1.2s; }
+@keyframes rfShimmer {
+  0%, 100% { opacity: 0.35; transform: scaleX(0.85); }
+  50%      { opacity: 0.95; transform: scaleX(1.05); }
+}
+
+/* ===== FOGOS DE ARTIFÍCIO ===== */
+.welcome-fireworks {
+  position: absolute; inset: 0;
+  pointer-events: none; overflow: visible;
+  z-index: 1;
+}
+.fw-spark {
+  position: absolute;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px 1px currentColor;
+  opacity: 0;
+  animation: fwBurst 1.1s cubic-bezier(0.15, 0.6, 0.3, 1) forwards;
+}
+@keyframes fwBurst {
+  0%   { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(0.2); opacity: 0; }
+}
+
+/* ===== EMOJIS SUBINDO ===== */
+.welcome-emojis {
+  position: absolute; inset: 0;
+  pointer-events: none; overflow: hidden;
+  z-index: 1;
+}
+.we-emoji {
+  position: absolute; bottom: -34px;
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: emojiRise linear forwards;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
+}
+@keyframes emojiRise {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+  12%  { opacity: 0.95; }
+  85%  { opacity: 0.95; }
+  100% { transform: translateY(-360px) rotate(22deg); opacity: 0; }
+}
+
+/* ===== BOTÃO BORA ===== */
+.welcome-cta {
+  margin-top: 20px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-display, inherit);
+  font-size: 16px; font-weight: 800;
+  color: #2a1208;
+  padding: 13px 34px;
+  border-radius: 999px;
+  background: linear-gradient(100deg, #ffd87a, #f5a623 55%, #e05a47);
+  background-size: 200% 100%;
+  box-shadow: 0 10px 26px rgba(245,166,35,0.45), inset 0 1px 0 rgba(255,255,255,0.5);
+  animation: ctaShine 3s linear infinite, ctaPulse 2.2s ease-in-out infinite;
+  transition: transform 0.12s ease;
+}
+.welcome-cta:hover { transform: scale(1.06); }
+.welcome-cta:active { transform: scale(0.96); }
+@keyframes ctaShine { to { background-position: 200% 0; } }
+@keyframes ctaPulse {
+  0%, 100% { box-shadow: 0 10px 26px rgba(245,166,35,0.45), inset 0 1px 0 rgba(255,255,255,0.5); }
+  50%      { box-shadow: 0 12px 34px rgba(245,166,35,0.7),  inset 0 1px 0 rgba(255,255,255,0.5); }
+}
+
+

@@ -131,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
   animateStats();
   checkUrlImports();
   syncOnStartup();
+  maybeShowWelcome();
 });
 
 // Migração de campos novos
@@ -158,6 +159,15 @@ function migrate(r) {
       if (mm) { m.instagram = mm[1]; m.reels = ""; }
     }
   }
+  // Avaliações por pessoa (Marcelo / Andressa). Migra a avaliação antiga (única).
+  if (!m.ratings || typeof m.ratings !== "object" || Array.isArray(m.ratings)) {
+    m.ratings = {};
+    // A avaliação legada (única) vira a do Marcelo como ponto de partida.
+    if (m.rating && (m.rating.average || m.rating.comida)) {
+      m.ratings.marcelo = legacyToPersonRating(m.rating);
+    }
+  }
+  recomputeCombined(m);
   return m;
 }
 
@@ -328,7 +338,8 @@ function getFilteredRestaurants() {
     if (currentBairro && r.bairro !== currentBairro) return false;
     if (currentSearch) {
       const q = currentSearch.toLowerCase();
-      const hay = [r.name, r.bairro, r.categoria, r.notes, r.rating?.comments].filter(Boolean).join(" ").toLowerCase();
+      const comments = r.ratings ? Object.values(r.ratings).map(p => p && p.comments) : [];
+      const hay = [r.name, r.bairro, r.categoria, r.notes, ...comments].filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -396,14 +407,22 @@ function renderCard(r) {
       preco: "💰 Preço", instagramavel: "📸 Instag.", experiencia: "❤️ Exper."
     };
     const ratingRows = RATE_CATS.map(c =>
-      `<div class="rating-item-summary">${cardRatingShort[c.key]} <span>${r.rating[c.key] ?? "–"}</span></div>`
+      `<div class="rating-item-summary">${cardRatingShort[c.key]} <span>${r.rating[c.key] || "–"}</span></div>`
+    ).join("");
+    const byPerson = r.rating.byPerson || {};
+    const peopleLine = RATERS.filter(p => byPerson[p.key] != null).map(p =>
+      `<span class="rater-chip">${p.emoji} ${p.label} <strong>${byPerson[p.key]}</strong>★</span>`
+    ).join("");
+    const commentsLine = RATERS.filter(p => r.ratings?.[p.key]?.comments).map(p =>
+      `<div class="rating-comment">${p.emoji} "${escapeHtml(r.ratings[p.key].comments)}"</div>`
     ).join("");
     ratingHtml = `
       <div class="card-ratings-summary">
+        ${peopleLine ? `<div class="rater-chips">${peopleLine}</div>` : ""}
         <div class="rating-grid">
           ${ratingRows}
         </div>
-        ${r.rating.comments ? `<div class="rating-comment">"${escapeHtml(r.rating.comments)}"</div>` : ""}
+        ${commentsLine}
       </div>`;
   } else if (r.notes) {
     ratingHtml = `<div class="card-ratings-summary"><div class="rating-comment">📝 ${escapeHtml(r.notes)}</div></div>`;
@@ -1647,13 +1666,57 @@ const RATE_CATS = [
   { key: "instagramavel", label: "Instagramável", emoji: "📸" },
   { key: "experiencia", label: "Experiência", emoji: "❤️" }
 ];
-let _detailRating = {};
+// Quem avalia (abas por pessoa). Resultado final = média das pessoas.
+const RATERS = [
+  { key: "marcelo", label: "Marcelo", emoji: "🧔" },
+  { key: "andressa", label: "Andressa", emoji: "👩" }
+];
+
+// Monta o objeto de avaliação de UMA pessoa a partir das notas dos critérios.
+function buildPersonRating(vals, comments, date) {
+  const present = RATE_CATS.map(c => vals[c.key]).filter(v => v > 0);
+  const avg = present.length ? +(present.reduce((a, b) => a + b, 0) / present.length).toFixed(1) : 0;
+  const out = { average: avg, comments: (comments || "").trim(), date: date || "" };
+  RATE_CATS.forEach(c => { out[c.key] = vals[c.key] || 0; });
+  return out;
+}
+
+// Converte a avaliação antiga (única) no formato de uma pessoa.
+function legacyToPersonRating(old) {
+  const vals = {};
+  RATE_CATS.forEach(c => { vals[c.key] = old[c.key] || 0; });
+  return buildPersonRating(vals, old.comments, old.date);
+}
+
+// Recalcula a avaliação COMBINADA (média das pessoas) e guarda em r.rating.
+// r.rating mantém o formato antigo (average + por critério) p/ todo o resto do app,
+// e ganha r.rating.byPerson = { marcelo: 4.2, andressa: 4.8 }.
+function recomputeCombined(r) {
+  const people = RATERS.map(p => r.ratings && r.ratings[p.key]).filter(Boolean);
+  if (!people.length) { r.rating = null; return; }
+  const combined = { byPerson: {} };
+  RATE_CATS.forEach(c => {
+    const vals = people.map(p => p[c.key]).filter(v => v > 0);
+    combined[c.key] = vals.length ? +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : 0;
+  });
+  const avgs = people.map(p => p.average).filter(v => v > 0);
+  combined.average = avgs.length ? +(avgs.reduce((a, b) => a + b, 0) / avgs.length).toFixed(1) : 0;
+  const dates = people.map(p => p.date).filter(Boolean).sort();
+  combined.date = dates[dates.length - 1] || "";
+  RATERS.forEach(p => { if (r.ratings[p.key]) combined.byPerson[p.key] = r.ratings[p.key].average; });
+  r.rating = combined;
+}
+
+// Estado de edição: cópia de trabalho das notas de cada pessoa + pessoa ativa.
+let _detailWork = {};
+let _detailPerson = "marcelo";
 
 function renderDetailStars() {
   const body = document.getElementById("detail-rate-body");
   if (!body) return;
+  const work = _detailWork[_detailPerson] || { vals: {} };
   body.innerHTML = RATE_CATS.map(cat => {
-    const v = _detailRating[cat.key] || 0;
+    const v = work.vals[cat.key] || 0;
     const stars = [1, 2, 3, 4, 5].map(n =>
       `<button type="button" class="star ${n <= v ? "on" : ""}" onclick="setStar('${cat.key}', ${n})" onmouseover="previewStars('${cat.key}', ${n})" onmouseout="previewStars('${cat.key}', ${v})" title="${n} estrela${n > 1 ? "s" : ""}">★</button>`
     ).join("");
@@ -1664,14 +1727,51 @@ function renderDetailStars() {
   }).join("");
   const avgEl = document.getElementById("detail-rate-avg");
   if (avgEl) {
-    const vals = RATE_CATS.map(c => _detailRating[c.key] || 0).filter(v => v > 0);
+    const vals = RATE_CATS.map(c => work.vals[c.key] || 0).filter(v => v > 0);
     avgEl.textContent = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "—";
   }
+  updateRaterTabs();
+}
+
+// Atualiza o número (nota) mostrado em cada aba de pessoa.
+function updateRaterTabs() {
+  RATERS.forEach(p => {
+    const chip = document.getElementById(`rater-tab-avg-${p.key}`);
+    if (!chip) return;
+    const work = _detailWork[p.key] || { vals: {} };
+    const vals = RATE_CATS.map(c => work.vals[c.key] || 0).filter(v => v > 0);
+    chip.textContent = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) + "★" : "—";
+  });
+}
+
+// Salva comentário/data digitados na cópia de trabalho da pessoa ativa.
+function captureRateInputs() {
+  const work = _detailWork[_detailPerson];
+  if (!work) return;
+  const c = document.getElementById("detail-comments");
+  const d = document.getElementById("detail-rate-date");
+  if (c) work.comments = c.value.trim();
+  if (d) work.date = d.value;
+}
+
+function switchRatePerson(personKey) {
+  captureRateInputs();
+  _detailPerson = personKey;
+  document.querySelectorAll(".rater-tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.person === personKey));
+  const work = _detailWork[personKey];
+  const c = document.getElementById("detail-comments");
+  const d = document.getElementById("detail-rate-date");
+  if (c) c.value = work.comments || "";
+  if (d) d.value = work.date || new Date().toISOString().slice(0, 10);
+  renderDetailStars();
 }
 
 function setStar(key, n) {
+  const work = _detailWork[_detailPerson];
+  if (!work) return;
   // Tocar de novo na mesma nota zera (permite corrigir).
-  _detailRating[key] = (_detailRating[key] === n) ? 0 : n;
+  work.vals[key] = (work.vals[key] === n) ? 0 : n;
   renderDetailStars();
 }
 
@@ -1687,20 +1787,24 @@ function previewStars(key, n) {
 function saveDetailRating(id) {
   const r = restaurants.find(x => x.id === id);
   if (!r) return;
-  if (RATE_CATS.some(c => !_detailRating[c.key])) {
-    toast("Dê pelo menos 1 estrela em cada item", "error");
+  captureRateInputs();
+  if (!r.ratings || typeof r.ratings !== "object") r.ratings = {};
+  const today = new Date().toISOString().slice(0, 10);
+  let anySaved = false;
+  RATERS.forEach(p => {
+    const work = _detailWork[p.key];
+    if (!work) return;
+    const filled = RATE_CATS.filter(c => work.vals[c.key] > 0);
+    if (filled.length === 0) { delete r.ratings[p.key]; return; }  // sem notas = sem avaliação
+    r.ratings[p.key] = buildPersonRating(work.vals, work.comments, work.date || today);
+    anySaved = true;
+  });
+  if (!anySaved) {
+    toast("Dê pelo menos 1 estrela (Marcelo ou Andressa)", "error");
     return;
   }
-  const vals = RATE_CATS.map(c => _detailRating[c.key]);
-  const avg = +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
   r.status = "ja-fui";
-  const rating = {
-    average: avg,
-    comments: document.getElementById("detail-comments").value.trim(),
-    date: document.getElementById("detail-rate-date").value || new Date().toISOString().slice(0, 10)
-  };
-  RATE_CATS.forEach(c => { rating[c.key] = _detailRating[c.key]; });
-  r.rating = rating;
+  recomputeCombined(r);
   saveToStorage(); populateFilters(); render();
   toast("Avaliação salva! ⭐", "success");
   openDetailModal(id);
@@ -1709,15 +1813,24 @@ function saveDetailRating(id) {
 function openDetailModal(id, focusRating) {
   const r = restaurants.find(x => x.id === id);
   if (!r) return;
-  _detailRating = {};
-  if (r.rating) RATE_CATS.forEach(c => { _detailRating[c.key] = r.rating[c.key] || 0; });
+  // Cópia de trabalho das notas de cada pessoa (Marcelo / Andressa).
+  const today = new Date().toISOString().slice(0, 10);
+  _detailWork = {};
+  RATERS.forEach(p => {
+    const src = (r.ratings && r.ratings[p.key]) || {};
+    const vals = {};
+    RATE_CATS.forEach(c => { vals[c.key] = src[c.key] || 0; });
+    _detailWork[p.key] = { vals, comments: src.comments || "", date: src.date || today };
+  });
+  _detailPerson = (typeof focusRating === "string" && _detailWork[focusRating]) ? focusRating : "marcelo";
+  const startWork = _detailWork[_detailPerson] || _detailWork.marcelo;
 
   const photoUrl = r.photo || CATEGORY_IMAGES[r.categoria] || CATEGORY_IMAGES["Outro"];
   const searchString = encodeURIComponent(`${r.name} ${r.bairro} Porto Alegre`);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${searchString}`;
   const mapsRouteUrl = `https://www.google.com/maps/dir/?api=1&destination=${searchString}`;
   const igUrl = instagramProfileUrl(r);
-  const dateVal = (r.rating && r.rating.date) || new Date().toISOString().slice(0, 10);
+  const dateVal = startWork.date || today;
 
   const photos = r.photos || [];
   const galleryHtml = `
@@ -1795,16 +1908,36 @@ function openDetailModal(id, focusRating) {
       ${locationHtml}
 
       <div class="detail-rate" id="detail-rate">
+        ${r.rating ? `
+        <div class="final-rate">
+          <div class="final-rate-big">★ ${r.rating.average}</div>
+          <div class="final-rate-info">
+            <div class="final-rate-label">Média final</div>
+            <div class="final-rate-people">
+              ${RATERS.filter(p => r.rating.byPerson?.[p.key] != null).map(p =>
+                `<span>${p.emoji} ${p.label}: <strong>${r.rating.byPerson[p.key]}</strong>★</span>`).join("")}
+            </div>
+          </div>
+        </div>` : ""}
+
         <div class="detail-rate-head">
-          <span>⭐ Sua avaliação</span>
-          <span class="detail-rate-avg-wrap">Média: <strong id="detail-rate-avg">—</strong></span>
+          <span>⭐ Avaliações</span>
+          <span class="detail-rate-avg-wrap">Nota desta pessoa: <strong id="detail-rate-avg">—</strong></span>
         </div>
+
+        <div class="rater-tabs">
+          ${RATERS.map(p => `
+            <button type="button" class="rater-tab ${p.key === _detailPerson ? "active" : ""}" data-person="${p.key}" onclick="switchRatePerson('${p.key}')">
+              ${p.emoji} ${p.label} <span class="rater-tab-avg" id="rater-tab-avg-${p.key}">—</span>
+            </button>`).join("")}
+        </div>
+
         <div id="detail-rate-body"></div>
         <label class="form-label" style="margin-top:12px;">📅 Data da visita</label>
         <input type="date" id="detail-rate-date" class="form-control" value="${dateVal}">
-        <label class="form-label" style="margin-top:12px;">💬 Comentários</label>
-        <textarea id="detail-comments" class="form-control" rows="2" placeholder="Ex: peça a batata frita trufada, vale muito a pena!">${escapeHtml(r.rating?.comments || "")}</textarea>
-        <button class="btn-confirm-save" onclick="saveDetailRating('${r.id}')">${r.rating ? '✅ Atualizar avaliação' : '✅ Salvar avaliação'}</button>
+        <label class="form-label" style="margin-top:12px;">💬 Comentário (desta pessoa)</label>
+        <textarea id="detail-comments" class="form-control" rows="2" placeholder="Ex: peça a batata frita trufada, vale muito a pena!">${escapeHtml(startWork.comments || "")}</textarea>
+        <button class="btn-confirm-save" onclick="saveDetailRating('${r.id}')">${r.rating ? '✅ Atualizar avaliações' : '✅ Salvar avaliação'}</button>
       </div>
 
       ${r.notes ? `<div class="card-ratings-summary"><div class="rating-comment">📝 ${escapeHtml(r.notes)}</div></div>` : ''}
@@ -2279,6 +2412,182 @@ function burstConfetti() {
     layer.appendChild(p);
   }
   setTimeout(() => { if (layer) layer.innerHTML = ""; }, 1600);
+}
+
+// Som de "vrum" do carrinho (Web Audio).
+function playVroom() {
+  const ctx = getAudio(); if (!ctx) return;
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator(); osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(70, t);
+  osc.frequency.exponentialRampToValueAtTime(230, t + 0.5);
+  osc.frequency.exponentialRampToValueAtTime(110, t + 1.2);
+  const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.13, t + 0.12);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+  osc.connect(lp); lp.connect(g); g.connect(ctx.destination);
+  osc.start(t); osc.stop(t + 1.35);
+}
+
+// ===== BOAS-VINDAS (primeira visita) =====
+const WELCOME_NAME = "Andressa";
+function maybeShowWelcome() {
+  // Só aparece na primeira vez que o app é aberto neste navegador.
+  if (localStorage.getItem("role_poa_welcomed")) return;
+  showWelcome();
+}
+function showWelcome() {
+  if (document.getElementById("welcome-overlay")) return;
+  const ov = document.createElement("div");
+  ov.id = "welcome-overlay";
+  ov.className = "welcome-overlay";
+  ov.innerHTML = `
+    <div class="welcome-card" onclick="dismissWelcome()">
+      <div class="welcome-glow"></div>
+      <div class="welcome-fireworks" id="welcome-fireworks"></div>
+      <div class="welcome-emojis" id="welcome-emojis"></div>
+
+      <div class="welcome-badge">
+        <svg class="sunset-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="skyGrad" cx="50%" cy="40%" r="80%">
+              <stop offset="0%"   stop-color="#ffe6a3"/>
+              <stop offset="32%"  stop-color="#ff9d5c"/>
+              <stop offset="66%"  stop-color="#d6504a"/>
+              <stop offset="100%" stop-color="#511f30"/>
+            </radialGradient>
+            <radialGradient id="sunGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stop-color="#fff6d8"/>
+              <stop offset="55%"  stop-color="#ffd166"/>
+              <stop offset="100%" stop-color="#ff9d3c"/>
+            </radialGradient>
+            <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="#f0975a"/>
+              <stop offset="100%" stop-color="#6e2536"/>
+            </linearGradient>
+            <clipPath id="circClip"><circle cx="100" cy="100" r="92"/></clipPath>
+          </defs>
+
+          <g clip-path="url(#circClip)">
+            <rect x="0" y="0" width="200" height="200" fill="url(#skyGrad)"/>
+
+            <!-- raios suaves girando atrás do sol -->
+            <g class="sun-rays" opacity="0.35">
+              <path d="M100 100 L100 8 L112 8 Z" fill="rgba(255,240,200,0.5)"/>
+              <path d="M100 100 L60 18 L74 14 Z" fill="rgba(255,240,200,0.4)"/>
+              <path d="M100 100 L140 18 L126 14 Z" fill="rgba(255,240,200,0.4)"/>
+              <path d="M100 100 L18 60 L16 74 Z" fill="rgba(255,240,200,0.3)"/>
+              <path d="M100 100 L182 60 L184 74 Z" fill="rgba(255,240,200,0.3)"/>
+            </g>
+
+            <!-- sol -->
+            <circle class="sun" cx="100" cy="94" r="33" fill="url(#sunGrad)"/>
+
+            <!-- pássaros -->
+            <g class="birds" stroke="#3a1620" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.6">
+              <path d="M52 56 q4 -4 8 0 q4 -4 8 0"/>
+              <path d="M70 46 q3 -3 6 0 q3 -3 6 0"/>
+            </g>
+
+            <!-- água do Guaíba -->
+            <rect x="0" y="122" width="200" height="78" fill="url(#waterGrad)"/>
+            <!-- morros / silhueta -->
+            <path d="M0 124 Q40 110 78 122 T150 116 T200 124 L200 130 L0 130 Z" fill="#46202c" opacity="0.75"/>
+
+            <!-- reflexo do sol na água (cacos cintilando) -->
+            <g class="reflection" fill="rgba(255,224,160,0.85)">
+              <rect class="rf r1" x="86" y="130" width="28" height="3" rx="1.5"/>
+              <rect class="rf r2" x="82" y="140" width="36" height="3" rx="1.5"/>
+              <rect class="rf r3" x="88" y="150" width="24" height="2.5" rx="1.2"/>
+              <rect class="rf r4" x="80" y="162" width="40" height="2.5" rx="1.2"/>
+              <rect class="rf r5" x="86" y="174" width="28" height="2" rx="1"/>
+            </g>
+          </g>
+
+          <!-- aro do medalhão -->
+          <circle cx="100" cy="100" r="92" fill="none" stroke="rgba(255,216,140,0.55)" stroke-width="2.5"/>
+          <circle cx="100" cy="100" r="92" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="6"/>
+        </svg>
+      </div>
+
+      <h2 class="welcome-title">Bem-vinda, ${escapeHtml(WELCOME_NAME)}!</h2>
+      <p class="welcome-sub">Vamos dar uns rolês legais por Porto Alegre ✨</p>
+
+      <button class="welcome-cta" onclick="event.stopPropagation(); dismissWelcome()">Bora! 🎉</button>
+    </div>`;
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => ov.classList.add("show"));
+
+  const fwHost = ov.querySelector("#welcome-fireworks");
+  const emHost = ov.querySelector("#welcome-emojis");
+  setTimeout(() => { burstConfetti(); launchFireworks(fwHost, 5); floatEmojis(emHost); }, 450);
+  // mantém os fogos pipocando enquanto a tela estiver aberta
+  ov._fwTimer = setInterval(() => launchFireworks(fwHost, 3), 2400);
+}
+
+// Fogos de artifício: bursts de partículas dentro de um container (%).
+function launchFireworks(host, rounds = 4) {
+  if (!host || !document.body.contains(host)) return;
+  const colors = ["#F5A623", "#E05A47", "#4CAF50", "#ffd87a", "#4A9EFF", "#ff7eb3", "#ffffff"];
+  let round = 0;
+  const fire = () => {
+    if (!document.body.contains(host)) return;
+    const cx = 18 + Math.random() * 64;   // % horizontal
+    const cy = 10 + Math.random() * 42;   // % vertical (parte de cima)
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const N = 16;
+    for (let i = 0; i < N; i++) {
+      const s = document.createElement("i");
+      s.className = "fw-spark";
+      const ang = (Math.PI * 2 * i) / N + Math.random() * 0.3;
+      const dist = 24 + Math.random() * 30;
+      s.style.left = cx + "%";
+      s.style.top = cy + "%";
+      s.style.color = color;
+      s.style.background = color;
+      s.style.setProperty("--fx", Math.cos(ang) * dist + "px");
+      s.style.setProperty("--fy", Math.sin(ang) * dist + "px");
+      s.style.animationDelay = (Math.random() * 0.05) + "s";
+      host.appendChild(s);
+      setTimeout(() => s.remove(), 1200);
+    }
+    round++;
+    if (round < rounds) setTimeout(fire, 340 + Math.random() * 280);
+  };
+  fire();
+}
+
+// Emojis subindo como balõezinhos.
+function floatEmojis(host) {
+  if (!host) return;
+  const set = ["🍷", "🍔", "🍕", "🌮", "🍻", "🎉", "✨", "🥂", "🍝", "🧉", "🍰", "🌭"];
+  const spawn = () => {
+    if (!document.body.contains(host)) return;
+    const e = document.createElement("span");
+    e.className = "we-emoji";
+    e.textContent = set[Math.floor(Math.random() * set.length)];
+    e.style.left = (6 + Math.random() * 86) + "%";
+    const dur = 3.4 + Math.random() * 2.2;
+    e.style.animationDuration = dur + "s";
+    e.style.fontSize = (16 + Math.random() * 13) + "px";
+    host.appendChild(e);
+    setTimeout(() => e.remove(), dur * 1000 + 120);
+    setTimeout(spawn, 420 + Math.random() * 460);
+  };
+  spawn();
+}
+
+function dismissWelcome() {
+  const ov = document.getElementById("welcome-overlay");
+  if (!ov) return;
+  localStorage.setItem("role_poa_welcomed", "1");
+  if (ov._fwTimer) { clearInterval(ov._fwTimer); ov._fwTimer = null; }
+  try { playFanfare(); } catch (e) {}
+  burstConfetti();
+  ov.classList.add("drive");
+  setTimeout(() => ov.remove(), 700);
 }
 
 // ===== MENU =====
