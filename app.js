@@ -1214,7 +1214,10 @@ const PlaceEnrichmentService = {
 };
 
 // ===== Carregamento da API do Google (lazy, só quando há chave) =====
-function getGoogleKey() { return localStorage.getItem("role_poa_gmaps_key") || ""; }
+// Chave do Google Maps/Places embutida (restrita por domínio: localhost + rolepoa.netlify.app).
+// Assim funciona automaticamente em qualquer aparelho, sem precisar "conectar" manualmente.
+const DEFAULT_GOOGLE_KEY = "AIzaSyCVH7932duKQQ4qkRxxaq-2ICZPralu79s";
+function getGoogleKey() { return localStorage.getItem("role_poa_gmaps_key") || DEFAULT_GOOGLE_KEY; }
 function setGoogleKey(k) {
   k = (k || "").trim();
   if (k) localStorage.setItem("role_poa_gmaps_key", k);
