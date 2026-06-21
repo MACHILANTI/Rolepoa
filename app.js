@@ -159,12 +159,21 @@ function migrate(r) {
       if (mm) { m.instagram = mm[1]; m.reels = ""; }
     }
   }
-  // Avaliações por pessoa (Marcelo / Andressa). Migra a avaliação antiga (única).
-  if (!m.ratings || typeof m.ratings !== "object" || Array.isArray(m.ratings)) {
-    m.ratings = {};
-    // A avaliação legada (única) vira a do Marcelo como ponto de partida.
+  // Avaliações: LISTA de avaliações { id, person, ...notas }. Migra formatos antigos.
+  if (Array.isArray(m.ratings)) {
+    // já no formato novo
+  } else if (m.ratings && typeof m.ratings === "object") {
+    // Formato antigo { marcelo:{...}, andressa:{...} } -> lista com nomes.
+    m.ratings = Object.keys(m.ratings).filter(k => m.ratings[k]).map(k => ({
+      id: "rt-" + k,
+      person: k.charAt(0).toUpperCase() + k.slice(1),
+      ...m.ratings[k]
+    }));
+  } else {
+    m.ratings = [];
+    // Avaliação legada (única) vira a primeira da lista.
     if (m.rating && (m.rating.average || m.rating.comida)) {
-      m.ratings.marcelo = legacyToPersonRating(m.rating);
+      m.ratings.push(legacyToRating(m.rating, "Marcelo"));
     }
   }
   recomputeCombined(m);
@@ -411,21 +420,23 @@ function renderCard(r) {
   let ratingHtml = "";
   if (r.status === "ja-fui" && r.rating) {
     const cardRatingShort = {
-      comida: "🍔 Comida", atendimento: "🧑‍🍳 Atend.", ambiente: "🪑 Ambiente",
+      comida: "🍔 Comida", bebida: "🍹 Bebida", atendimento: "🧑‍🍳 Atend.", ambiente: "🪑 Ambiente",
       preco: "💰 Preço", instagramavel: "📸 Instag.", experiencia: "❤️ Exper."
     };
     const ratingRows = RATE_CATS.map(c =>
       `<div class="rating-item-summary">${cardRatingShort[c.key]} <span>${r.rating[c.key] || "–"}</span></div>`
     ).join("");
-    const byPerson = r.rating.byPerson || {};
-    const peopleLine = RATERS.filter(p => byPerson[p.key] != null).map(p =>
-      `<span class="rater-chip">${p.emoji} ${p.label} <strong>${byPerson[p.key]}</strong>★</span>`
-    ).join("");
-    const commentsLine = RATERS.filter(p => r.ratings?.[p.key]?.comments).map(p =>
-      `<div class="rating-comment">${p.emoji} "${escapeHtml(r.ratings[p.key].comments)}"</div>`
+    const raters = r.rating.raters || [];
+    const peopleLine = raters.map(p => {
+      const drink = DRINK_TYPES.find(d => d.key === p.bebidaTipo);
+      return `<span class="rater-chip">👤 ${escapeHtml(p.person)} <strong>${p.average}</strong>★${drink ? ` ${drink.emoji}` : ""}</span>`;
+    }).join("");
+    const commentsLine = (Array.isArray(r.ratings) ? r.ratings : []).filter(rt => rt.comments).map(rt =>
+      `<div class="rating-comment">👤 ${escapeHtml(rt.person)}: "${escapeHtml(rt.comments)}"</div>`
     ).join("");
     ratingHtml = `
       <div class="card-ratings-summary">
+        <div class="rater-count">👥 ${r.rating.count} ${r.rating.count === 1 ? "avaliação" : "avaliações"}</div>
         ${peopleLine ? `<div class="rater-chips">${peopleLine}</div>` : ""}
         <div class="rating-grid">
           ${ratingRows}
@@ -1647,7 +1658,7 @@ function commitNewPlace(data) {
     status: "para-conhecer",
     favorite: false,
     rating: null,
-    ratings: {},
+    ratings: [],
     createdAt: Date.now()
   });
   toast(`"${data.name}" adicionado à sua lista!`, "success");
@@ -1732,119 +1743,257 @@ function saveRating(event) {
 // ===== AVALIAÇÃO POR ESTRELAS (no detalhe) =====
 const RATE_CATS = [
   { key: "comida", label: "Comida", emoji: "🍔" },
+  { key: "bebida", label: "Bebida", emoji: "🍹" },
   { key: "atendimento", label: "Atendimento", emoji: "🧑‍🍳" },
   { key: "ambiente", label: "Ambiente", emoji: "🪑" },
   { key: "preco", label: "Preço-benefício", emoji: "💰" },
   { key: "instagramavel", label: "Instagramável", emoji: "📸" },
   { key: "experiencia", label: "Experiência", emoji: "❤️" }
 ];
-// Quem avalia (abas por pessoa). Resultado final = média das pessoas.
-const RATERS = [
-  { key: "marcelo", label: "Marcelo", emoji: "🧔" },
-  { key: "andressa", label: "Andressa", emoji: "👩" }
+// Tipos de bebida (escolhido ao avaliar o critério Bebida).
+const DRINK_TYPES = [
+  { key: "cerveja", label: "Cerveja", emoji: "🍺" },
+  { key: "drinks", label: "Drinks", emoji: "🍸" },
+  { key: "vinho", label: "Vinho", emoji: "🍷" }
 ];
 
-// Monta o objeto de avaliação de UMA pessoa a partir das notas dos critérios.
-function buildPersonRating(vals, comments, date) {
-  const present = RATE_CATS.map(c => vals[c.key]).filter(v => v > 0);
+// Monta uma avaliação a partir do estado de trabalho do formulário.
+function buildRating(work) {
+  const present = RATE_CATS.map(c => work.vals[c.key]).filter(v => v > 0);
   const avg = present.length ? +(present.reduce((a, b) => a + b, 0) / present.length).toFixed(1) : 0;
-  const out = { average: avg, comments: (comments || "").trim(), date: date || "" };
-  RATE_CATS.forEach(c => { out[c.key] = vals[c.key] || 0; });
+  const out = {
+    id: work.id || ("rt-" + Date.now()),
+    person: (work.person || "").trim() || "Anônimo",
+    average: avg,
+    comments: (work.comments || "").trim(),
+    date: work.date || "",
+    bebidaTipo: work.bebidaTipo || ""
+  };
+  RATE_CATS.forEach(c => { out[c.key] = work.vals[c.key] || 0; });
   return out;
 }
 
-// Converte a avaliação antiga (única) no formato de uma pessoa.
-function legacyToPersonRating(old) {
+// Converte a avaliação antiga (única) numa avaliação da lista nova.
+function legacyToRating(old, person) {
   const vals = {};
   RATE_CATS.forEach(c => { vals[c.key] = old[c.key] || 0; });
-  return buildPersonRating(vals, old.comments, old.date);
+  return buildRating({ id: "rt-legacy", person, vals, comments: old.comments, date: old.date, bebidaTipo: old.bebidaTipo });
 }
 
-// Recalcula a avaliação COMBINADA (média das pessoas) e guarda em r.rating.
-// r.rating mantém o formato antigo (average + por critério) p/ todo o resto do app,
-// e ganha r.rating.byPerson = { marcelo: 4.2, andressa: 4.8 }.
+// Recalcula a avaliação COMBINADA (média de TODAS as avaliações) em r.rating.
+// r.rating mantém o formato antigo (average + por critério) e ganha:
+// .count (nº de avaliações) e .raters (lista resumida por pessoa).
 function recomputeCombined(r) {
-  const people = RATERS.map(p => r.ratings && r.ratings[p.key]).filter(Boolean);
-  if (!people.length) { r.rating = null; return; }
-  const combined = { byPerson: {} };
+  const list = Array.isArray(r.ratings) ? r.ratings.filter(Boolean) : [];
+  if (!list.length) { r.rating = null; return; }
+  const combined = { count: list.length };
   RATE_CATS.forEach(c => {
-    const vals = people.map(p => p[c.key]).filter(v => v > 0);
+    const vals = list.map(p => p[c.key]).filter(v => v > 0);
     combined[c.key] = vals.length ? +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : 0;
   });
-  const avgs = people.map(p => p.average).filter(v => v > 0);
+  const avgs = list.map(p => p.average).filter(v => v > 0);
   combined.average = avgs.length ? +(avgs.reduce((a, b) => a + b, 0) / avgs.length).toFixed(1) : 0;
-  const dates = people.map(p => p.date).filter(Boolean).sort();
+  const dates = list.map(p => p.date).filter(Boolean).sort();
   combined.date = dates[dates.length - 1] || "";
-  RATERS.forEach(p => { if (r.ratings[p.key]) combined.byPerson[p.key] = r.ratings[p.key].average; });
+  combined.raters = list.map(p => ({ id: p.id, person: p.person, average: p.average, bebidaTipo: p.bebidaTipo }));
   r.rating = combined;
 }
 
-// Estado de edição: cópia de trabalho das notas de cada pessoa + pessoa ativa.
-let _detailWork = {};
-let _detailPerson = "marcelo";
+// Estado do formulário de avaliação aberto (ou null = fechado).
+let _detailWork = null;   // { id, person, vals:{}, bebidaTipo, comments, date }
+let _detailRestId = null;
+
+// HTML da lista de avaliações já existentes.
+function rateListHTML(r) {
+  const list = Array.isArray(r.ratings) ? r.ratings : [];
+  if (!list.length) return `<p class="rate-empty">Ainda sem avaliações. Seja o primeiro! ⭐</p>`;
+  return list.map(rt => {
+    const drink = DRINK_TYPES.find(d => d.key === rt.bebidaTipo);
+    return `<div class="rate-card" onclick="toggleRateCard(this, event)">
+      <div class="rate-card-top">
+        <span class="rate-card-person">👤 ${escapeHtml(rt.person || "Anônimo")}</span>
+        <span class="rate-card-avg">★ ${rt.average || "–"} <span class="rate-card-caret">▾</span></span>
+      </div>
+      <div class="rate-card-meta">${drink ? `${drink.emoji} ${drink.label}` : ""}${drink && rt.date ? " · " : ""}${rt.date ? formatDateBR(rt.date) : ""} · toque pra ver as notas</div>
+      ${rt.comments ? `<div class="rate-card-comment">"${escapeHtml(rt.comments)}"</div>` : ""}
+      <div class="rate-card-detail">${previewStarsHTML(rt)}</div>
+      <div class="rate-card-actions">
+        <button type="button" onclick="editRating('${r.id}','${rt.id}')">✏️ Editar</button>
+        <button type="button" class="danger" onclick="deleteRating('${r.id}','${rt.id}')">🗑️ Excluir</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// Clicar no card da avaliação expande/recolhe as notas dadas (estrelas por critério).
+function toggleRateCard(el, event) {
+  if (event && event.target.closest("button")) return;  // não alterna ao clicar em Editar/Excluir
+  el.classList.toggle("open");
+}
+
+// Abre o formulário em branco para uma nova avaliação.
+function newRating(id) {
+  _detailRestId = id;
+  _detailWork = { id: null, person: "", vals: {}, bebidaTipo: "", comments: "", date: new Date().toISOString().slice(0, 10) };
+  renderRateForm();
+}
+
+// Carrega uma avaliação existente na cópia de trabalho (sem rolar a tela).
+function loadRating(id, ratingId) {
+  const r = restaurants.find(x => x.id === id);
+  const src = r && Array.isArray(r.ratings) ? r.ratings.find(x => x.id === ratingId) : null;
+  if (!src) return false;
+  _detailRestId = id;
+  const vals = {};
+  RATE_CATS.forEach(c => { vals[c.key] = src[c.key] || 0; });
+  _detailWork = { id: src.id, person: src.person || "", vals, bebidaTipo: src.bebidaTipo || "", comments: src.comments || "", date: src.date || new Date().toISOString().slice(0, 10) };
+  return true;
+}
+
+// Edita uma avaliação existente (abre o form e rola até ele).
+function editRating(id, ratingId) {
+  if (!loadRating(id, ratingId)) return;
+  renderRateForm();
+  const el = document.getElementById("rate-form-area");
+  if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+}
+
+// Estado padrão ao abrir o lugar: mostra as estrelas da ÚLTIMA pessoa (visualização);
+// se ainda não houver avaliações, abre o formulário em branco direto.
+function showDefaultRateForm(id) {
+  _detailRestId = id;
+  _detailWork = null;
+  const r = restaurants.find(x => x.id === id);
+  const list = r && Array.isArray(r.ratings) ? r.ratings : [];
+  if (!list.length) { newRating(id); return; }
+  renderRateForm();   // sem _detailWork + com avaliações = mostra preview da última
+}
+
+function cancelRating() {
+  _detailWork = null;
+  renderRateForm();
+}
+
+// Estrelas só-leitura (visualização da última avaliação).
+function previewStarsHTML(rt) {
+  return RATE_CATS.map(cat => {
+    const v = rt[cat.key] || 0;
+    const stars = [1, 2, 3, 4, 5].map(n => `<span class="star ro ${n <= v ? "on" : ""}">★</span>`).join("");
+    let tag = "";
+    if (cat.key === "bebida" && rt.bebidaTipo) {
+      const d = DRINK_TYPES.find(x => x.key === rt.bebidaTipo);
+      if (d) tag = ` <span class="drink-tag">${d.emoji} ${d.label}</span>`;
+    }
+    return `<div class="rate-row">
+      <span class="rate-label">${cat.emoji} ${cat.label}${tag}</span>
+      <span class="rate-stars">${stars}</span>
+    </div>`;
+  }).join("");
+}
+
+// Renderiza a área da tabela de estrelas: visualização da última pessoa OU formulário editável.
+function renderRateForm() {
+  const area = document.getElementById("rate-form-area");
+  if (!area) return;
+  const r = restaurants.find(x => x.id === _detailRestId);
+  const list = r && Array.isArray(r.ratings) ? r.ratings : [];
+
+  // Sem formulário aberto: mostra a tabela da ÚLTIMA pessoa + botão "Nova avaliação".
+  if (!_detailWork) {
+    if (!list.length) {
+      area.innerHTML = `<button type="button" class="btn-confirm-save" onclick="newRating('${_detailRestId}')">➕ Nova avaliação</button>`;
+      return;
+    }
+    const last = list[list.length - 1];
+    area.innerHTML = `
+      <button type="button" class="add-other-btn" onclick="newRating('${_detailRestId}')">➕ Nova avaliação</button>
+      <div class="rate-preview">
+        <div class="detail-rate-head"><span>⭐ Última avaliação · 👤 ${escapeHtml(last.person || "Anônimo")}</span><span class="detail-rate-avg-wrap"><strong>${last.average || "–"}</strong>★</span></div>
+        ${previewStarsHTML(last)}
+      </div>`;
+    return;
+  }
+
+  // Formulário editável (nova ou editando).
+  const w = _detailWork;
+  const editing = !!w.id;
+  const otherBtn = list.length
+    ? `<button type="button" class="add-other-btn" onclick="newRating('${_detailRestId}')">➕ Nova avaliação</button>`
+    : "";
+  area.innerHTML = `
+    ${otherBtn}
+    <div class="rate-form">
+      <label class="form-label">${editing ? "Editando avaliação de:" : "Quem está avaliando?"}</label>
+      <input type="text" id="rate-person" class="form-control" placeholder="Nome de quem avalia (ex: Marcelo)" value="${escapeAttr(w.person || "")}" autocomplete="off">
+      <div class="detail-rate-head" style="margin-top:14px;">
+        <span>⭐ Notas</span>
+        <span class="detail-rate-avg-wrap">Média: <strong id="detail-rate-avg">—</strong></span>
+      </div>
+      <div id="detail-rate-body"></div>
+      <label class="form-label" style="margin-top:12px;">📅 Data da visita</label>
+      <input type="date" id="detail-rate-date" class="form-control" value="${w.date}">
+      <label class="form-label" style="margin-top:12px;">💬 Comentário</label>
+      <textarea id="detail-comments" class="form-control" rows="2" placeholder="Ex: peça a batata frita trufada, vale muito a pena!">${escapeHtml(w.comments || "")}</textarea>
+      <div class="rate-form-actions">
+        ${list.length ? `<button type="button" class="btn-ghost" onclick="cancelRating()">Cancelar</button>` : ""}
+        <button type="button" class="btn-confirm-save" onclick="saveDetailRating('${_detailRestId}')">✅ Salvar avaliação</button>
+      </div>
+    </div>`;
+  renderDetailStars();
+}
 
 function renderDetailStars() {
   const body = document.getElementById("detail-rate-body");
-  if (!body) return;
-  const work = _detailWork[_detailPerson] || { vals: {} };
+  if (!body || !_detailWork) return;
+  const work = _detailWork;
   body.innerHTML = RATE_CATS.map(cat => {
     const v = work.vals[cat.key] || 0;
     const stars = [1, 2, 3, 4, 5].map(n =>
       `<button type="button" class="star ${n <= v ? "on" : ""}" onclick="setStar('${cat.key}', ${n})" onmouseover="previewStars('${cat.key}', ${n})" onmouseout="previewStars('${cat.key}', ${v})" title="${n} estrela${n > 1 ? "s" : ""}">★</button>`
     ).join("");
+    // No critério Bebida, mostra os tipos (cerveja/drinks/vinho) logo abaixo.
+    let extra = "";
+    if (cat.key === "bebida") {
+      extra = `<div class="drink-types">${DRINK_TYPES.map(d =>
+        `<button type="button" class="drink-pin ${work.bebidaTipo === d.key ? "active" : ""}" onclick="setDrinkType('${d.key}')">${d.emoji} ${d.label}</button>`
+      ).join("")}</div>`;
+    }
     return `<div class="rate-row" data-cat="${cat.key}">
       <span class="rate-label">${cat.emoji} ${cat.label}</span>
       <span class="rate-stars">${stars}</span>
-    </div>`;
+    </div>${extra}`;
   }).join("");
   const avgEl = document.getElementById("detail-rate-avg");
   if (avgEl) {
     const vals = RATE_CATS.map(c => work.vals[c.key] || 0).filter(v => v > 0);
     avgEl.textContent = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "—";
   }
-  updateRaterTabs();
-}
-
-// Atualiza o número (nota) mostrado em cada aba de pessoa.
-function updateRaterTabs() {
-  RATERS.forEach(p => {
-    const chip = document.getElementById(`rater-tab-avg-${p.key}`);
-    if (!chip) return;
-    const work = _detailWork[p.key] || { vals: {} };
-    const vals = RATE_CATS.map(c => work.vals[c.key] || 0).filter(v => v > 0);
-    chip.textContent = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) + "★" : "—";
-  });
-}
-
-// Salva comentário/data digitados na cópia de trabalho da pessoa ativa.
-function captureRateInputs() {
-  const work = _detailWork[_detailPerson];
-  if (!work) return;
-  const c = document.getElementById("detail-comments");
-  const d = document.getElementById("detail-rate-date");
-  if (c) work.comments = c.value.trim();
-  if (d) work.date = d.value;
-}
-
-function switchRatePerson(personKey) {
-  captureRateInputs();
-  _detailPerson = personKey;
-  document.querySelectorAll(".rater-tab").forEach(t =>
-    t.classList.toggle("active", t.dataset.person === personKey));
-  const work = _detailWork[personKey];
-  const c = document.getElementById("detail-comments");
-  const d = document.getElementById("detail-rate-date");
-  if (c) c.value = work.comments || "";
-  if (d) d.value = work.date || new Date().toISOString().slice(0, 10);
-  renderDetailStars();
 }
 
 function setStar(key, n) {
-  const work = _detailWork[_detailPerson];
-  if (!work) return;
+  if (!_detailWork) return;
   // Tocar de novo na mesma nota zera (permite corrigir).
-  work.vals[key] = (work.vals[key] === n) ? 0 : n;
+  _detailWork.vals[key] = (_detailWork.vals[key] === n) ? 0 : n;
+  captureRateInputs();
   renderDetailStars();
+}
+
+function setDrinkType(key) {
+  if (!_detailWork) return;
+  _detailWork.bebidaTipo = (_detailWork.bebidaTipo === key) ? "" : key;
+  captureRateInputs();
+  renderDetailStars();
+}
+
+// Guarda o que foi digitado (nome/comentário/data) antes de re-renderizar as estrelas.
+function captureRateInputs() {
+  if (!_detailWork) return;
+  const p = document.getElementById("rate-person");
+  const c = document.getElementById("detail-comments");
+  const d = document.getElementById("detail-rate-date");
+  if (p) _detailWork.person = p.value;
+  if (c) _detailWork.comments = c.value;
+  if (d) _detailWork.date = d.value;
 }
 
 // Preview ao passar o mouse: acende as estrelas até a posição, sem salvar.
@@ -1858,51 +2007,53 @@ function previewStars(key, n) {
 
 function saveDetailRating(id) {
   const r = restaurants.find(x => x.id === id);
-  if (!r) return;
+  if (!r || !_detailWork) return;
   captureRateInputs();
-  if (!r.ratings || typeof r.ratings !== "object") r.ratings = {};
-  const today = new Date().toISOString().slice(0, 10);
-  let anySaved = false;
-  RATERS.forEach(p => {
-    const work = _detailWork[p.key];
-    if (!work) return;
-    const filled = RATE_CATS.filter(c => work.vals[c.key] > 0);
-    if (filled.length === 0) { delete r.ratings[p.key]; return; }  // sem notas = sem avaliação
-    r.ratings[p.key] = buildPersonRating(work.vals, work.comments, work.date || today);
-    anySaved = true;
-  });
-  if (!anySaved) {
-    toast("Dê pelo menos 1 estrela (Marcelo ou Andressa)", "error");
-    return;
-  }
+  const filled = RATE_CATS.filter(c => _detailWork.vals[c.key] > 0);
+  if (filled.length === 0) { toast("Dê pelo menos 1 estrela", "error"); return; }
+  if (!(_detailWork.person || "").trim()) { toast("Escreva quem está avaliando", "error"); return; }
+  if (!_detailWork.date) _detailWork.date = new Date().toISOString().slice(0, 10);
+  if (!Array.isArray(r.ratings)) r.ratings = [];
+  const built = buildRating(_detailWork);
+  const idx = r.ratings.findIndex(x => x.id === built.id);
+  if (idx !== -1) r.ratings[idx] = built; else r.ratings.push(built);
   r.status = "ja-fui";
   recomputeCombined(r);
+  _detailWork = null;
   saveToStorage(); populateFilters(); render();
   toast("Avaliação salva! ⭐", "success");
   openDetailModal(id);
 }
 
+function deleteRating(id, ratingId) {
+  const r = restaurants.find(x => x.id === id);
+  if (!r) return;
+  showConfirm({
+    title: "Excluir avaliação?",
+    message: "Tem certeza que quer excluir esta avaliação?",
+    okLabel: "Excluir", okDanger: true,
+    onOk: () => {
+      r.ratings = (Array.isArray(r.ratings) ? r.ratings : []).filter(x => x.id !== ratingId);
+      recomputeCombined(r);
+      _detailWork = null;
+      saveToStorage(); populateFilters(); render();
+      openDetailModal(id);
+      toast("Avaliação excluída", "info");
+    }
+  });
+}
+
 function openDetailModal(id, focusRating) {
   const r = restaurants.find(x => x.id === id);
   if (!r) return;
-  // Cópia de trabalho das notas de cada pessoa (Marcelo / Andressa).
-  const today = new Date().toISOString().slice(0, 10);
-  _detailWork = {};
-  RATERS.forEach(p => {
-    const src = (r.ratings && r.ratings[p.key]) || {};
-    const vals = {};
-    RATE_CATS.forEach(c => { vals[c.key] = src[c.key] || 0; });
-    _detailWork[p.key] = { vals, comments: src.comments || "", date: src.date || today };
-  });
-  _detailPerson = (typeof focusRating === "string" && _detailWork[focusRating]) ? focusRating : "marcelo";
-  const startWork = _detailWork[_detailPerson] || _detailWork.marcelo;
+  // Formulário de avaliação começa fechado (só o botão "Nova avaliação").
+  _detailRestId = id;
+  _detailWork = null;
 
-  const photoUrl = r.photo || CATEGORY_IMAGES[r.categoria] || CATEGORY_IMAGES["Outro"];
   const searchString = encodeURIComponent(`${r.name} ${r.bairro} Porto Alegre`);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${searchString}`;
   const mapsRouteUrl = `https://www.google.com/maps/dir/?api=1&destination=${searchString}`;
   const igUrl = instagramProfileUrl(r);
-  const dateVal = startWork.date || today;
 
   const photos = r.photos || [];
   const galleryHtml = `
@@ -1977,39 +2128,23 @@ function openDetailModal(id, focusRating) {
 
       <div class="detail-dishes" id="detail-dishes"></div>
 
-      ${locationHtml}
-
-      <div class="detail-rate" id="detail-rate">
+      <div class="detail-ratings-list" id="detail-ratings-list">
         ${r.rating ? `
         <div class="final-rate">
           <div class="final-rate-big">★ ${r.rating.average}</div>
           <div class="final-rate-info">
             <div class="final-rate-label">Média final</div>
-            <div class="final-rate-people">
-              ${RATERS.filter(p => r.rating.byPerson?.[p.key] != null).map(p =>
-                `<span>${p.emoji} ${p.label}: <strong>${r.rating.byPerson[p.key]}</strong>★</span>`).join("")}
-            </div>
+            <div class="final-rate-count">👥 ${r.rating.count} ${r.rating.count === 1 ? "pessoa avaliou" : "pessoas avaliaram"}</div>
           </div>
         </div>` : ""}
+        <div class="detail-rate-head"><span>⭐ Avaliações</span></div>
+        <div class="rate-list" id="rate-list">${rateListHTML(r)}</div>
+      </div>
 
-        <div class="detail-rate-head">
-          <span>⭐ Avaliações</span>
-          <span class="detail-rate-avg-wrap">Nota desta pessoa: <strong id="detail-rate-avg">—</strong></span>
-        </div>
+      ${locationHtml}
 
-        <div class="rater-tabs">
-          ${RATERS.map(p => `
-            <button type="button" class="rater-tab ${p.key === _detailPerson ? "active" : ""}" data-person="${p.key}" onclick="switchRatePerson('${p.key}')">
-              ${p.emoji} ${p.label} <span class="rater-tab-avg" id="rater-tab-avg-${p.key}">—</span>
-            </button>`).join("")}
-        </div>
-
-        <div id="detail-rate-body"></div>
-        <label class="form-label" style="margin-top:12px;">📅 Data da visita</label>
-        <input type="date" id="detail-rate-date" class="form-control" value="${dateVal}">
-        <label class="form-label" style="margin-top:12px;">💬 Comentário (desta pessoa)</label>
-        <textarea id="detail-comments" class="form-control" rows="2" placeholder="Ex: peça a batata frita trufada, vale muito a pena!">${escapeHtml(startWork.comments || "")}</textarea>
-        <button class="btn-confirm-save" onclick="saveDetailRating('${r.id}')">${r.rating ? '✅ Atualizar avaliações' : '✅ Salvar avaliação'}</button>
+      <div class="detail-rate" id="detail-rate">
+        <div class="rate-form-area" id="rate-form-area"></div>
       </div>
 
       ${r.notes ? `<div class="card-ratings-summary"><div class="rating-comment">📝 ${escapeHtml(r.notes)}</div></div>` : ''}
@@ -2020,7 +2155,7 @@ function openDetailModal(id, focusRating) {
       <button class="btn-ghost danger" onclick="closeDetailModal(); confirmDelete('${r.id}')">🗑️ Excluir</button>
     </div>`;
   document.getElementById("modal-detail").classList.add("active");
-  renderDetailStars();
+  showDefaultRateForm(id);   // mostra as estrelas da última pessoa (ou form em branco se não houver)
   renderDishes(r.id);
   if (focusRating) {
     const el = document.getElementById("detail-rate");

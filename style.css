@@ -1407,7 +1407,7 @@ select.form-control {
   white-space: nowrap;
 }
 
-.detail-rate {
+.detail-rate, .detail-ratings-list {
   margin-top: 16px;
   background: var(--bg-input);
   border: 1px solid var(--border);
@@ -1440,37 +1440,106 @@ select.form-control {
   line-height: 1; white-space: nowrap;
 }
 .final-rate-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-.final-rate-people { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; margin-top: 3px; }
-.final-rate-people strong { color: var(--text); }
+.final-rate-count { font-size: 14px; font-weight: 700; color: var(--text); margin-top: 3px; }
 
-/* Abas de pessoa (Marcelo / Andressa) */
-.rater-tabs {
-  display: flex; gap: 8px;
-  margin: 10px 0 4px;
-}
-.rater-tab {
-  flex: 1;
+/* Lista de avaliações (cada pessoa) */
+.rate-list { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 12px; }
+.rate-empty { color: var(--text-muted); font-size: 13.5px; text-align: center; padding: 10px 0; }
+.rate-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 11px 13px;
   cursor: pointer;
-  font-size: 13.5px; font-weight: 700;
+  transition: border-color 0.15s;
+}
+.rate-card:hover { border-color: rgba(245,166,35,0.4); }
+.rate-card-top { display: flex; justify-content: space-between; align-items: center; }
+.rate-card-person { font-weight: 800; font-size: 14.5px; }
+.rate-card-avg { font-weight: 800; color: var(--primary); font-size: 15px; white-space: nowrap; }
+.rate-card-caret { display: inline-block; transition: transform 0.2s; font-size: 11px; opacity: 0.8; }
+.rate-card.open .rate-card-caret { transform: rotate(180deg); }
+.rate-card-detail {
+  display: none;
+  margin-top: 10px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+.rate-card.open .rate-card-detail { display: block; }
+.rate-card-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.rate-card-comment {
+  font-size: 13px; font-style: italic; color: var(--text);
+  border-left: 2px solid var(--primary); padding: 3px 0 3px 9px; margin-top: 8px;
+}
+.rate-card-actions { display: flex; gap: 8px; margin-top: 9px; }
+.rate-card-actions button {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.rate-card-actions button:hover { color: var(--text); }
+.rate-card-actions button.danger { border-color: rgba(231,76,60,0.4); color: var(--danger); }
+
+/* Botão "outra pessoa avaliar" (no lugar das antigas abas) */
+.add-other-btn {
+  display: block;
+  width: 100%;
+  margin: 0 0 14px;
+  cursor: pointer;
+  font-size: 13.5px; font-weight: 800;
+  color: var(--primary);
+  background: rgba(245,166,35,0.10);
+  border: 1.5px dashed rgba(245,166,35,0.55);
+  border-radius: 999px;
+  padding: 10px;
+  transition: all 0.15s ease;
+}
+.add-other-btn:hover { background: rgba(245,166,35,0.18); }
+
+/* Formulário de nova avaliação */
+.rate-form { margin-top: 4px; }
+.rate-form-actions { display: flex; gap: 10px; margin-top: 14px; }
+.rate-form-actions .btn-ghost, .rate-form-actions .btn-confirm-save { flex: 1; }
+
+/* Tipos de bebida (cerveja / drinks / vinho) */
+.drink-types {
+  display: flex; flex-wrap: wrap; gap: 7px;
+  padding: 4px 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+.drink-pin {
+  cursor: pointer;
+  font-size: 12.5px; font-weight: 700;
   color: var(--text-muted);
   background: rgba(255,255,255,0.04);
   border: 1.5px solid var(--border);
   border-radius: 999px;
-  padding: 8px 10px;
-  transition: all 0.15s ease;
+  padding: 5px 12px;
+  transition: all 0.14s ease;
 }
-.rater-tab:hover { color: var(--text); }
-.rater-tab.active {
+.drink-pin:hover { color: var(--text); }
+.drink-pin.active {
   color: #2a1208;
   background: linear-gradient(100deg, #ffd87a, var(--primary));
   border-color: transparent;
-  box-shadow: 0 4px 12px rgba(245,166,35,0.35);
 }
-.rater-tab-avg {
-  font-weight: 800;
-  opacity: 0.85;
-  margin-left: 2px;
+
+/* Estrelas só-leitura (visualização da última avaliação) */
+.star.ro { cursor: default; pointer-events: none; font-size: 22px; }
+.drink-tag {
+  font-size: 11px; font-weight: 700;
+  color: var(--primary);
+  background: rgba(245,166,35,0.12);
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin-left: 4px;
+  white-space: nowrap;
 }
+.rate-preview { margin-top: 4px; }
+
+/* Contagem de avaliações no card */
+.rater-count { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; }
 
 .rate-row {
   display: flex;
