@@ -215,6 +215,14 @@ function coverLogoHTML(r, isHero) {
   return `<div class="cover-logo${isHero ? " hero-logo" : ""}"><span class="cover-logo-emoji">${emoji}</span>${img}</div>`;
 }
 
+// Logo pequeno ao lado do nome (substitui o logo no meio da foto).
+function titleLogoHTML(r) {
+  const logoUrl = placeLogoUrl(r);
+  const emoji = CATEGORIA_EMOJI[r.categoria] || "🍽️";
+  const img = logoUrl ? `<img src="${escapeAttr(logoUrl)}" alt="" onerror="this.remove()">` : "";
+  return `<span class="title-logo"><span class="title-logo-emoji">${emoji}</span>${img}</span>`;
+}
+
 // ===== STORAGE (localStorage = cache offline) =====
 function saveLocal() {
   try {
@@ -433,7 +441,6 @@ function renderCard(r) {
     <div class="restaurant-card" data-cat="${escapeAttr(r.categoria)}" onclick="cardClick(event, '${r.id}')">
       <div class="card-image-wrapper">
         <div class="card-image" style="background-image: ${coverBg(r)}; background-position: ${escapeAttr(r.photoPos || 'center')}"></div>
-        ${coverLogoHTML(r)}
         ${badgeHtml}
         <button class="card-fav ${r.favorite ? 'active' : ''}" data-id="${r.id}" onclick="event.stopPropagation(); toggleFavorite('${r.id}')" title="Favoritar">${r.favorite ? '❤️' : '🤍'}</button>
         ${(r.photos && r.photos.length) ? `<div class="card-badge photos">📸 ${r.photos.length}</div>` : ''}
@@ -447,7 +454,10 @@ function renderCard(r) {
           ${r.price ? `<span class="tag tag-price">${r.price}</span>` : ''}
         </div>
 
-        <h3 class="card-title">${escapeHtml(r.name)}</h3>
+        <div class="card-title-row">
+          <h3 class="card-title">${escapeHtml(r.name)}</h3>
+          ${titleLogoHTML(r)}
+        </div>
 
         <div class="card-actions">
           ${igUrl ? `<a href="${escapeAttr(igUrl)}" target="_blank" rel="noopener" class="action-btn btn-instagram">📷 Instagram</a>` : '<button class="action-btn" disabled style="opacity:0.4">📷 Sem Instagram</button>'}
