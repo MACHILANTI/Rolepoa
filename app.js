@@ -749,9 +749,44 @@ function openAddModal() {
   document.getElementById("smart-results").innerHTML = "";
   document.getElementById("smart-confirm").innerHTML = "";
   renderGoogleStatus();
+  dismissDupAlert();
   document.getElementById("modal-add").classList.add("active");
 }
 function closeAddModal() { document.getElementById("modal-add").classList.remove("active"); }
+
+// ===== AVISO DE LUGAR JÁ CADASTRADO =====
+// Nomes "parecidos": iguais, ou um contém o outro (ex: "Fornellone" x "Fornellone Petrópolis").
+function namesSimilar(a, b) {
+  a = normalize(a).trim();
+  b = normalize(b).trim();
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.length >= 4 && b.length >= 4 && (a.includes(b) || b.includes(a))) return true;
+  return false;
+}
+// Alerta vermelho fixo (perto do campo), some só ao clicar.
+function showDupAlert(name) {
+  const el = document.getElementById("dup-alert");
+  if (!el) return;
+  el.innerHTML = `⚠️ <strong>${escapeHtml(name)}</strong> já está cadastrado na sua lista! <span class="dup-alert-x">✕ fechar</span>`;
+  el.style.display = "";
+}
+function dismissDupAlert() {
+  const el = document.getElementById("dup-alert");
+  if (el) { el.style.display = "none"; el.innerHTML = ""; }
+}
+// Acha um lugar já existente com nome parecido OU mesmo @ do Instagram.
+function findDuplicatePlace(name, instagram, excludeId) {
+  const ig = (instagram || "").replace(/^@/, "").toLowerCase();
+  const hasName = normalize(name).trim().length > 0;
+  if (!hasName && !ig) return null;
+  return restaurants.find(r => {
+    if (excludeId && r.id === excludeId) return false;
+    if (hasName && namesSimilar(name, r.name)) return true;
+    if (ig && r.instagram && r.instagram.toLowerCase() === ig) return true;
+    return false;
+  }) || null;
+}
 
 function openEditModal(id) {
   const r = restaurants.find(x => x.id === id);
@@ -1287,6 +1322,7 @@ async function runSmartSearch() {
   const resultsEl = document.getElementById("smart-results");
   const confirmEl = document.getElementById("smart-confirm");
   if (!raw) { toast("Cole o @ do Instagram ou o nome", "error"); return; }
+  dismissDupAlert();
   confirmEl.innerHTML = "";
   resultsEl.innerHTML = `<div class="smart-loading">🔎 Buscando informações…</div>`;
 
@@ -1303,6 +1339,8 @@ async function runSmartSearch() {
         : "";
       resultsEl.innerHTML = gErr +
         `<div class="smart-msg">Nada encontrado para "<b>${escapeHtml(query || handle)}</b>". Tente o nome completo ou preencha os campos abaixo manualmente.</div>`;
+      const dupNF = findDuplicatePlace(query || handle, handle, document.getElementById("edit-id")?.value || null);
+      if (dupNF) showDupAlert(dupNF.name);
       return;
     }
     if (candidates.length === 1) {
@@ -1372,7 +1410,10 @@ function applyCandidate(c) {
     review_count: c.reviewCount ?? null
   };
   renderConfirmCard(c);
-  toast(`"${c.name}" preenchido! Confira e salve.`, "success");
+  // Aviso fixo se esse lugar já está na lista — usa o nome COMPLETO + @ do Google.
+  const dup = findDuplicatePlace(c.name, c.instagram, document.getElementById("edit-id")?.value || null);
+  if (dup) showDupAlert(dup.name);
+  else toast(`"${c.name}" preenchido! Confira e salve.`, "success");
 }
 
 // Seleciona o bairro; se não existir na lista, adiciona como nova opção.
@@ -1580,18 +1621,36 @@ function saveRestaurant(event) {
       restaurants[i] = { ...restaurants[i], ...data };
       toast("Lugar atualizado!", "success");
     }
-  } else {
-    restaurants.push({
-      id: "rest-" + Date.now(),
-      ...data,
-      status: "para-conhecer",
-      favorite: false,
-      rating: null,
-      createdAt: Date.now()
-    });
-    toast(`"${data.name}" adicionado à sua lista!`, "success");
+    saveToStorage(); populateFilters(); closeAddModal(); render();
+    return;
   }
 
+  // Novo lugar: avisa se já existe um igual (mesmo nome ou mesmo @).
+  const dup = findDuplicatePlace(data.name, instagram, null);
+  if (dup) {
+    showConfirm({
+      title: "⚠️ Lugar já cadastrado?",
+      message: `Parece que "${dup.name}"${dup.bairro ? ` — ${dup.bairro}` : ''} já está na sua lista. Quer adicionar mesmo assim?`,
+      okLabel: "Adicionar mesmo assim",
+      onOk: () => commitNewPlace(data)
+    });
+    return;
+  }
+  commitNewPlace(data);
+}
+
+// Adiciona de fato um lugar novo à lista e atualiza tudo.
+function commitNewPlace(data) {
+  restaurants.push({
+    id: "rest-" + Date.now(),
+    ...data,
+    status: "para-conhecer",
+    favorite: false,
+    rating: null,
+    ratings: {},
+    createdAt: Date.now()
+  });
+  toast(`"${data.name}" adicionado à sua lista!`, "success");
   saveToStorage();
   populateFilters();
   closeAddModal();
@@ -2237,8 +2296,14 @@ async function shareRestaurant(id) {
 }
 
 // ===== RANDOM PICK =====
+let _randomCats = new Set();
 function openRandomPick() {
   document.getElementById("modal-random").classList.add("active");
+  _randomCats = new Set();
+  // Categorias que o usuário realmente tem cadastradas (ordenadas).
+  const cats = [...new Set(restaurants.map(r => r.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const chips = `<button type="button" class="cat-pin active" data-cat="" onclick="toggleRandomCat(this)">🎲 Todos</button>` +
+    cats.map(c => `<button type="button" class="cat-pin" data-cat="${escapeAttr(c)}" onclick="toggleRandomCat(this)">${CATEGORIA_EMOJI[c] || "🍽️"} ${escapeHtml(c)}</button>`).join("");
   // reset
   const result = document.getElementById("random-result");
   result.innerHTML = `
@@ -2246,11 +2311,27 @@ function openRandomPick() {
       <div class="random-intro-emoji">🎲</div>
       <p class="random-intro-title">Bora deixar a sorte decidir?</p>
       <p class="random-intro-sub">Eu escolho um rolê pra você agora mesmo.</p>
+      <div class="random-field">
+        <span>Categorias</span>
+        <div class="cat-pins" id="random-cat-pins">${chips}</div>
+      </div>
       <label class="random-toggle">
         <input type="checkbox" id="random-only-todo" checked>
         <span>Apenas lugares “Para Conhecer”</span>
       </label>
     </div>`;
+}
+// Liga/desliga um pin de categoria no sorteio (multi-seleção + "Todos").
+function toggleRandomCat(btn) {
+  const cat = btn.dataset.cat;
+  if (!cat) _randomCats.clear();                 // "Todos" zera os filtros
+  else if (_randomCats.has(cat)) _randomCats.delete(cat);
+  else _randomCats.add(cat);
+  const container = document.getElementById("random-cat-pins");
+  container.querySelectorAll(".cat-pin").forEach(p => {
+    const c = p.dataset.cat;
+    p.classList.toggle("active", c ? _randomCats.has(c) : _randomCats.size === 0);
+  });
 }
 function closeRandomPick() {
   clearTimeout(_diceTimer);
@@ -2357,9 +2438,13 @@ function playFanfare() {
 let _diceTimer = null;
 function doRandomPick() {
   const onlyTodo = document.getElementById("random-only-todo")?.checked ?? true;
-  const pool = restaurants.filter(r => onlyTodo ? r.status === "para-conhecer" : true);
+  const pool = restaurants.filter(r =>
+    (onlyTodo ? r.status === "para-conhecer" : true) &&
+    (_randomCats.size ? _randomCats.has(r.categoria) : true)
+  );
   if (!pool.length) {
-    toast("Nenhum lugar disponível!", "error"); return;
+    const catTxt = _randomCats.size ? ` de ${[..._randomCats].join("/")}` : "";
+    toast(`Nenhum lugar${catTxt}${onlyTodo ? ' "Para Conhecer"' : ''}!`, "error"); return;
   }
   const picked = pool[Math.floor(Math.random() * pool.length)];
   const result = document.getElementById("random-result");

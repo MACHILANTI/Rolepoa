@@ -1174,6 +1174,34 @@ select.form-control {
 .smart-fill .form-label { margin-bottom: 8px; }
 .smart-input-row { display: flex; gap: 8px; }
 .smart-input-row .form-control { flex: 1; }
+
+/* Alerta vermelho fixo de "já cadastrado" (some ao clicar) */
+.dup-alert {
+  margin-top: 10px;
+  padding: 11px 14px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: #fff;
+  background: linear-gradient(100deg, #c0392b, #e05a47);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(192,57,43,0.4);
+  animation: dupAlertIn 0.25s ease-out;
+}
+.dup-alert strong { font-weight: 800; }
+.dup-alert-x {
+  display: inline-block;
+  margin-left: 4px;
+  font-weight: 700;
+  text-decoration: underline;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+@keyframes dupAlertIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .btn-smart {
   flex-shrink: 0;
   background: linear-gradient(135deg, var(--primary), var(--secondary));
@@ -1938,6 +1966,48 @@ select.form-control {
   cursor: pointer;
 }
 .random-toggle input { width: 17px; height: 17px; accent-color: var(--primary); cursor: pointer; }
+
+/* Pins de categoria do sorteio (multi-seleção + "Todos") */
+.random-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  max-width: 340px;
+  margin: 0 auto 16px;
+}
+.random-field > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-left: 2px;
+}
+.cat-pins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.cat-pin {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 13px;
+  transition: all 0.14s ease;
+}
+.cat-pin:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+.cat-pin.active {
+  color: #2a1208;
+  background: linear-gradient(100deg, #ffd87a, var(--primary));
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(245,166,35,0.35);
+}
 
 /* Confetes */
 .confetti-layer { position: fixed; inset: 0; pointer-events: none; z-index: 3000; overflow: hidden; }

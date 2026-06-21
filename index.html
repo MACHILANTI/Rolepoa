@@ -141,6 +141,7 @@
                    onkeydown="if(event.key==='Enter'){event.preventDefault();runSmartSearch();}">
             <button type="button" class="btn-smart" onclick="runSmartSearch()">🔍 Buscar</button>
           </div>
+          <div id="dup-alert" class="dup-alert" style="display:none;" onclick="dismissDupAlert()" title="Clique para fechar"></div>
           <span class="hint">Achamos nome, endereço, bairro, categoria, telefone e site automaticamente. Conecte o Google pra trazer também foto, nota e faixa de preço.</span>
           <div id="google-status" class="google-status"></div>
           <div id="smart-results" class="smart-results"></div>
