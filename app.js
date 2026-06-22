@@ -269,11 +269,16 @@ async function syncOnStartup() {
     const { data, error } = await client.from("places").select("data");
     if (error) { console.warn("Supabase load:", error.message); return; }
     if (data && data.length) {
-      restaurants = data.map(row => migrate(row.data));
-      saveLocal();
-      populateFilters();
-      render();
-      updateStats();
+      const incoming = data.map(row => migrate(row.data));
+      // Só re-renderiza se a nuvem trouxer algo DIFERENTE do que já está na tela
+      // (evita um segundo render desnecessário no boot, que causava piscada).
+      if (JSON.stringify(incoming) !== JSON.stringify(restaurants)) {
+        restaurants = incoming;
+        saveLocal();
+        populateFilters();
+        render();
+        updateStats();
+      }
     } else if (restaurants.length) {
       await pushAll(); // nuvem vazia: primeira sincronização (sobe o local)
     }
@@ -399,10 +404,20 @@ function render() {
   }
 
   grid.innerHTML = filtered.map(renderCard).join("");
+  // Animação de entrada (cascata) só na PRIMEIRA renderização — evita o "piscar"
+  // que acontecia quando o render() rodava de novo (boot, favoritar, filtrar...).
+  if (_introDone) {
+    grid.classList.remove("intro");
+  } else {
+    grid.classList.add("intro");
+    _introDone = true;
+    setTimeout(() => grid.classList.remove("intro"), 900);
+  }
   updateStats();
 
   if (currentView === "map") renderMapMarkers(filtered);
 }
+let _introDone = false;
 
 function renderCard(r) {
   const searchString = encodeURIComponent(`${r.name} ${r.bairro} Porto Alegre`);
@@ -435,7 +450,7 @@ function renderCard(r) {
     ).join("");
     ratingHtml = `
       <div class="card-ratings-summary">
-        <div class="rater-count">👥 ${r.rating.count} ${r.rating.count === 1 ? "avaliação" : "avaliações"}</div>
+        <div class="rater-count">👥 ${r.rating.count} ${r.rating.count === 1 ? "avaliação" : "avaliações"}${r.rating.date ? ` · 📅 ${formatDateBR(r.rating.date)}` : ""}</div>
         ${peopleLine ? `<div class="rater-chips">${peopleLine}</div>` : ""}
         <div class="rating-grid">
           ${ratingRows}
@@ -460,13 +475,14 @@ function renderCard(r) {
         <div class="card-meta">
           <span class="tag tag-bairro">📍 ${escapeHtml(r.bairro)}</span>
           <span class="tag tag-categoria">${CATEGORIA_EMOJI[r.categoria]||"🍽️"} ${escapeHtml(r.categoria)}</span>
-          ${r.rating?.date ? `<span class="tag tag-date">📅 ${formatDateBR(r.rating.date)}</span>` : ''}
-          ${r.price ? `<span class="tag tag-price">${r.price}</span>` : ''}
         </div>
 
         <div class="card-title-row">
           <h3 class="card-title">${escapeHtml(r.name)}</h3>
-          ${titleLogoHTML(r)}
+          <div class="card-title-right">
+            ${r.price ? `<span class="title-price">${r.price}</span>` : ''}
+            ${titleLogoHTML(r)}
+          </div>
         </div>
 
         <div class="card-actions">

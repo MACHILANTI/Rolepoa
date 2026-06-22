@@ -339,6 +339,10 @@
           <span class="menu-icon">📊</span>
           <div><strong>Estatísticas</strong><small>Resumo do seu paladar</small></div>
         </button>
+        <button class="menu-item" onclick="closeMenu(); localStorage.removeItem('role_poa_welcomed'); location.reload();">
+          <span class="menu-icon">🎉</span>
+          <div><strong>Rever Boas-vindas</strong><small>Mostra a tela inicial novamente</small></div>
+        </button>
         <button class="menu-item danger" onclick="clearAllData()">
           <span class="menu-icon">⚠️</span>
           <div><strong>Apagar tudo</strong><small>Limpa todos os lugares</small></div>
