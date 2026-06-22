@@ -1,53 +1,9 @@
 // ===== DADOS INICIAIS =====
-const DEFAULT_RESTAURANTS = [
-  {
-    id: "demo-1",
-    name: "Cantiña Delicioso",
-    bairro: "Moinhos de Vento",
-    categoria: "Italiano",
-    price: "$$$",
-    reels: "",
-    photo: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&auto=format&fit=crop&q=80",
-    status: "para-conhecer",
-    favorite: false,
-    notes: "Indicação da Júlia — dizem que a burrata é divina.",
-    rating: null,
-    createdAt: Date.now() - 86400000 * 3
-  },
-  {
-    id: "demo-2",
-    name: "Severo Garage",
-    bairro: "Bom Fim",
-    categoria: "Hambúrguer",
-    price: "$$",
-    reels: "",
-    photo: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80",
-    status: "ja-fui",
-    favorite: true,
-    notes: "",
-    rating: {
-      comida: 4.5, ambiente: 4.0, atendimento: 5.0, preco: 4.0, localizacao: 4.5,
-      average: 4.4,
-      comments: "Hambúrguer muito saboroso e ambiente temático de oficina mecânica sensacional.",
-      date: "2026-04-12"
-    },
-    createdAt: Date.now() - 86400000 * 30
-  },
-  {
-    id: "demo-3",
-    name: "Agridoce Café",
-    bairro: "Cidade Baixa",
-    categoria: "Café",
-    price: "$",
-    reels: "",
-    photo: "https://images.unsplash.com/photo-1498804103079-a6351b050096?w=600&auto=format&fit=crop&q=80",
-    status: "para-conhecer",
-    favorite: false,
-    notes: "",
-    rating: null,
-    createdAt: Date.now() - 86400000 * 7
-  }
-];
+// Sem lugares-demo: o app começa vazio e adota os dados reais da nuvem.
+const DEFAULT_RESTAURANTS = [];
+// IDs dos antigos lugares-demo, que devem ser removidos de vez (voltavam pela
+// sincronização). Ver purgeDemoSeeds().
+const DEMO_IDS = ["demo-1", "demo-2", "demo-3"];
 
 const CATEGORY_IMAGES = {
   "Hambúrguer": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80",
@@ -124,6 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
     restaurants = [...DEFAULT_RESTAURANTS];
     saveToStorage();
   }
+  purgeDemoSeeds();   // tira os lugares-demo antigos do aparelho (e da nuvem)
 
   setupPricePicker();
   populateFilters();
@@ -134,6 +91,17 @@ document.addEventListener("DOMContentLoaded", () => {
   maybeShowWelcome();
   setupModalScrollLock();
 });
+
+// Remove de vez os lugares-demo (sementes antigas) que voltavam pela sincronização.
+// Limpa o aparelho e manda apagar da nuvem também.
+function purgeDemoSeeds() {
+  const before = restaurants.length;
+  restaurants = restaurants.filter(r => !DEMO_IDS.includes(r.id));
+  if (restaurants.length !== before) {
+    saveLocal();
+    DEMO_IDS.forEach(id => { try { deleteFromCloud(id); } catch (e) {} });
+  }
+}
 
 // Trava o scroll do fundo enquanto QUALQUER modal estiver aberto.
 // Evita o flicker no celular (barra de endereço mexendo + fundo rolando).
@@ -231,15 +199,6 @@ function placeLogoUrl(r) {
   return r.instagram ? instagramAvatarUrl(r.instagram) : "";
 }
 
-// HTML do logo central: imagem (logo custom/IG) com emoji da categoria como fallback.
-function coverLogoHTML(r, isHero) {
-  const logoUrl = placeLogoUrl(r);
-  if (!logoUrl && !r.instagram) return "";
-  const emoji = CATEGORIA_EMOJI[r.categoria] || "🍽️";
-  const img = logoUrl ? `<img src="${escapeAttr(logoUrl)}" alt="" onerror="this.style.display='none'">` : "";
-  return `<div class="cover-logo${isHero ? " hero-logo" : ""}"><span class="cover-logo-emoji">${emoji}</span>${img}</div>`;
-}
-
 // Logo pequeno ao lado do nome (substitui o logo no meio da foto).
 function titleLogoHTML(r) {
   const logoUrl = placeLogoUrl(r);
@@ -285,7 +244,11 @@ async function syncOnStartup() {
     const { data, error } = await client.from("places").select("data");
     if (error) { console.warn("Supabase load:", error.message); return; }
     if (data && data.length) {
-      const incoming = data.map(row => migrate(row.data));
+      let incoming = data.map(row => migrate(row.data));
+      // Remove lugares-demo que ainda estejam na nuvem e manda apagá-los de lá.
+      const hadDemoCloud = incoming.some(r => DEMO_IDS.includes(r.id));
+      incoming = incoming.filter(r => !DEMO_IDS.includes(r.id));
+      if (hadDemoCloud) DEMO_IDS.forEach(id => { try { deleteFromCloud(id); } catch (e) {} });
       // Só re-renderiza se a nuvem trouxer algo DIFERENTE do que já está na tela
       // (evita um segundo render desnecessário no boot, que causava piscada).
       if (JSON.stringify(incoming) !== JSON.stringify(restaurants)) {
@@ -2076,7 +2039,6 @@ function openDetailModal(id, focusRating) {
       <button class="modal-close" onclick="closeDetailModal()">×</button>
     </div>
     <div class="detail-hero" id="detail-hero" style="background-image: ${coverBg(r)}; background-position: ${escapeAttr(r.photoPos || 'center')}">
-      ${coverLogoHTML(r, true)}
       ${r.rating ? `<div class="detail-hero-badge">★ ${r.rating.average}</div>` : ""}
       <div class="hero-edit">
         <button type="button" class="hero-edit-btn" onclick="toggleReposition('${r.id}')" title="Reposicionar a foto">↕ Ajustar</button>
