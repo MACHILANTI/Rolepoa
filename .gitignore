@@ -14,3 +14,7 @@ Thumbs.db
 
 # Servidor local de teste
 .serve.js
+
+# Skills e ferramentas do Claude Code
+.agents/
+skills-lock.json

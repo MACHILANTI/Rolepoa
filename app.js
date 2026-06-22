@@ -88,6 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
   animateStats();
   checkUrlImports();
   syncOnStartup();
+  purgeDemoSeeds();
   maybeShowWelcome();
   setupModalScrollLock();
 });
@@ -287,6 +288,15 @@ async function clearCloud() {
   if (!client) return;
   const { error } = await client.from("places").delete().neq("id", "");
   if (error) console.warn("Supabase clear:", error.message);
+}
+// Remove os antigos lugares-demo que voltavam pela sincronização.
+async function purgeDemoSeeds() {
+  const client = sb();
+  if (!client) return;
+  for (const id of DEMO_IDS) {
+    const { error } = await client.from("places").delete().eq("id", id);
+    if (error) console.warn(`Demo seed ${id}:`, error.message);
+  }
 }
 
 // Sobe um dataURL pro Storage e devolve a URL pública (fallback: o próprio dataURL).
