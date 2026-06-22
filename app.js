@@ -405,7 +405,6 @@ function render() {
 }
 
 function renderCard(r) {
-  const photoUrl = r.photo || CATEGORY_IMAGES[r.categoria] || CATEGORY_IMAGES["Outro"];
   const searchString = encodeURIComponent(`${r.name} ${r.bairro} Porto Alegre`);
   const mapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${searchString}`;
   const mapsRouteUrl = `https://www.google.com/maps/dir/?api=1&destination=${searchString}`;
@@ -553,7 +552,6 @@ function renderMapMarkers(list) {
 
   withCoords.forEach(r => {
     const m = L.marker([r.lat, r.lon], { icon: makeMarkerIcon(r, false) });
-    const photoUrl = r.photo || CATEGORY_IMAGES[r.categoria] || CATEGORY_IMAGES["Outro"];
     m.bindPopup(`
       <div class="map-popup">
         <div class="map-popup-img" style="background-image:${coverBg(r)}"></div>
@@ -585,7 +583,6 @@ function renderMapList(list) {
     return;
   }
   box.innerHTML = list.map(r => {
-    const photoUrl = r.photo || CATEGORY_IMAGES[r.categoria] || CATEGORY_IMAGES["Outro"];
     return `<div class="map-list-item" data-id="${r.id}"
         onmouseenter="focusMarker('${r.id}', true)" onmouseleave="focusMarker('${r.id}', false)"
         onclick="openDetailModal('${r.id}')">
@@ -1686,59 +1683,6 @@ function confirmDelete(id) {
   });
 }
 
-// ===== AVALIAR =====
-function openRateModal(id) {
-  document.getElementById("rate-id").value = id;
-  document.getElementById("form-rate").reset();
-
-  const today = new Date().toISOString().slice(0, 10);
-  document.getElementById("rate-date").value = today;
-
-  const criteria = ["comida", "ambiente", "atendimento", "preco", "localizacao"];
-  criteria.forEach(c => {
-    document.getElementById(`slide-${c}`).value = 5;
-    document.getElementById(`val-${c}`).innerText = "5.0 🌟";
-  });
-
-  const r = restaurants.find(x => x.id === id);
-  if (r?.rating) {
-    criteria.forEach(c => {
-      document.getElementById(`slide-${c}`).value = r.rating[c];
-      document.getElementById(`val-${c}`).innerText = `${Number(r.rating[c]).toFixed(1)} 🌟`;
-    });
-    document.getElementById("input-comments").value = r.rating.comments || "";
-    if (r.rating.date) document.getElementById("rate-date").value = r.rating.date;
-  }
-  document.getElementById("modal-rate").classList.add("active");
-}
-function closeRateModal() { document.getElementById("modal-rate").classList.remove("active"); }
-function updateSliderVal(c, v) { document.getElementById(`val-${c}`).innerText = `${Number(v).toFixed(1)} 🌟`; }
-
-function saveRating(event) {
-  event.preventDefault();
-  const id = document.getElementById("rate-id").value;
-  const r = restaurants.find(x => x.id === id);
-  if (!r) return;
-
-  const c = parseFloat(document.getElementById("slide-comida").value);
-  const a = parseFloat(document.getElementById("slide-ambiente").value);
-  const at = parseFloat(document.getElementById("slide-atendimento").value);
-  const p = parseFloat(document.getElementById("slide-preco").value);
-  const l = parseFloat(document.getElementById("slide-localizacao").value);
-  const avg = ((c + a + at + p + l) / 5).toFixed(1);
-
-  r.status = "ja-fui";
-  r.rating = {
-    comida: c, ambiente: a, atendimento: at, preco: p, localizacao: l,
-    average: parseFloat(avg),
-    comments: document.getElementById("input-comments").value.trim(),
-    date: document.getElementById("rate-date").value
-  };
-  saveToStorage();
-  closeRateModal(); render();
-  toast(`Avaliado! Nota: ${avg} 🌟`, "success");
-}
-
 // ===== DETAIL MODAL =====
 // ===== AVALIAÇÃO POR ESTRELAS (no detalhe) =====
 const RATE_CATS = [
@@ -2083,15 +2027,15 @@ function openDetailModal(id, focusRating) {
   // Endereço + horários (a string de horários vem do Google, separada por " · ")
   const hoursLines = (r.hours || "").split("·").map(s => s.trim()).filter(Boolean);
   const todayName = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"][new Date().getDay()];
-  const locationHtml = (r.address || hoursLines.length) ? `
+  const locationHtml = `
     <div class="detail-location">
-      ${r.address ? `<div class="loc-address">📍 ${escapeHtml(r.address)}</div>` : ""}
+      ${r.address ? `<div class="loc-address">📍 ${escapeHtml(r.address)}</div>` : `<div class="loc-address" style="color:var(--text-muted); font-size:13px;">📍 Endereço não cadastrado</div>`}
       ${hoursLines.length ? `<div class="loc-hours-title">🕐 Horários de funcionamento</div>
         ${hoursLines.map(line => {
           const isToday = normalize(line).startsWith(normalize(todayName));
           return `<div class="hours-row ${isToday ? "today" : ""}">${escapeHtml(line)}${isToday ? " • hoje" : ""}</div>`;
-        }).join("")}` : ""}
-    </div>` : "";
+        }).join("")}` : `<div class="loc-hours-title" style="color:var(--text-muted); font-size:13px; font-weight:normal; margin-top:8px;">🕐 Horários não cadastrados</div>`}
+    </div>`;
 
   const content = document.getElementById("modal-detail-content");
   content.innerHTML = `
@@ -2124,9 +2068,15 @@ function openDetailModal(id, focusRating) {
     </div>
 
     <div class="detail-sections">
+      ${locationHtml}
+      
       ${galleryHtml}
-
+      
       <div class="detail-dishes" id="detail-dishes"></div>
+
+      <div class="detail-rate" id="detail-rate">
+        <div class="rate-form-area" id="rate-form-area"></div>
+      </div>
 
       <div class="detail-ratings-list" id="detail-ratings-list">
         ${r.rating ? `
@@ -2139,12 +2089,6 @@ function openDetailModal(id, focusRating) {
         </div>` : ""}
         <div class="detail-rate-head"><span>⭐ Avaliações</span></div>
         <div class="rate-list" id="rate-list">${rateListHTML(r)}</div>
-      </div>
-
-      ${locationHtml}
-
-      <div class="detail-rate" id="detail-rate">
-        <div class="rate-form-area" id="rate-form-area"></div>
       </div>
 
       ${r.notes ? `<div class="card-ratings-summary"><div class="rating-comment">📝 ${escapeHtml(r.notes)}</div></div>` : ''}
@@ -2601,7 +2545,6 @@ function doRandomPick() {
     if (rollBtn) rollBtn.disabled = false;
     burstConfetti();
     playFanfare();
-    const photoUrl = picked.photo || CATEGORY_IMAGES[picked.categoria] || CATEGORY_IMAGES["Outro"];
     result.innerHTML = `
       <div class="random-result-card">
         <div class="rr-hero" style="background-image:${coverBg(picked)}; background-position:${escapeAttr(picked.photoPos || 'center')}">
@@ -2647,25 +2590,9 @@ function burstConfetti() {
   setTimeout(() => { if (layer) layer.innerHTML = ""; }, 1600);
 }
 
-// Som de "vrum" do carrinho (Web Audio).
-function playVroom() {
-  const ctx = getAudio(); if (!ctx) return;
-  const t = ctx.currentTime;
-  const osc = ctx.createOscillator(); osc.type = "sawtooth";
-  osc.frequency.setValueAtTime(70, t);
-  osc.frequency.exponentialRampToValueAtTime(230, t + 0.5);
-  osc.frequency.exponentialRampToValueAtTime(110, t + 1.2);
-  const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900;
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.13, t + 0.12);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
-  osc.connect(lp); lp.connect(g); g.connect(ctx.destination);
-  osc.start(t); osc.stop(t + 1.35);
-}
 
 // ===== BOAS-VINDAS (primeira visita) =====
-const WELCOME_NAME = "Andressa";
+const WELCOME_NAME = "VISITANTE";
 function maybeShowWelcome() {
   // Só aparece na primeira vez que o app é aberto neste navegador.
   if (localStorage.getItem("role_poa_welcomed")) return;
@@ -2745,7 +2672,7 @@ function showWelcome() {
         </svg>
       </div>
 
-      <h2 class="welcome-title">Bem-vinda, ${escapeHtml(WELCOME_NAME)}!</h2>
+      <h2 class="welcome-title">BOAS VINDAS ${escapeHtml(WELCOME_NAME)}</h2>
       <p class="welcome-sub">Vamos dar uns rolês legais por Porto Alegre ✨</p>
 
       <button class="welcome-cta" onclick="event.stopPropagation(); dismissWelcome()">Bora! 🎉</button>
