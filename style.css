@@ -36,6 +36,9 @@
 
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; }
 body { overscroll-behavior-y: none; }
+/* Com um modal aberto, trava o scroll do fundo. No celular isso evita o
+   "piscar" causado pela barra de endereço aparecendo/sumindo (reflow de vh). */
+body.modal-open { overflow: hidden; }
 
 body {
   background:

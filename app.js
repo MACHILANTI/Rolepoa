@@ -132,7 +132,23 @@ document.addEventListener("DOMContentLoaded", () => {
   checkUrlImports();
   syncOnStartup();
   maybeShowWelcome();
+  setupModalScrollLock();
 });
+
+// Trava o scroll do fundo enquanto QUALQUER modal estiver aberto.
+// Evita o flicker no celular (barra de endereço mexendo + fundo rolando).
+function setupModalScrollLock() {
+  const sync = () => {
+    const open = document.querySelector(".modal.active") || document.getElementById("welcome-overlay");
+    document.body.classList.toggle("modal-open", !!open);
+  };
+  const obs = new MutationObserver(sync);
+  document.querySelectorAll(".modal").forEach(m =>
+    obs.observe(m, { attributes: true, attributeFilter: ["class"] }));
+  // Observa também a entrada/saída da tela de boas-vindas (criada dinamicamente).
+  new MutationObserver(sync).observe(document.body, { childList: true });
+  sync();
+}
 
 // Migração de campos novos
 function migrate(r) {
@@ -220,7 +236,7 @@ function coverLogoHTML(r, isHero) {
   const logoUrl = placeLogoUrl(r);
   if (!logoUrl && !r.instagram) return "";
   const emoji = CATEGORIA_EMOJI[r.categoria] || "🍽️";
-  const img = logoUrl ? `<img src="${escapeAttr(logoUrl)}" alt="" onerror="this.remove()">` : "";
+  const img = logoUrl ? `<img src="${escapeAttr(logoUrl)}" alt="" onerror="this.style.display='none'">` : "";
   return `<div class="cover-logo${isHero ? " hero-logo" : ""}"><span class="cover-logo-emoji">${emoji}</span>${img}</div>`;
 }
 
@@ -228,7 +244,7 @@ function coverLogoHTML(r, isHero) {
 function titleLogoHTML(r) {
   const logoUrl = placeLogoUrl(r);
   const emoji = CATEGORIA_EMOJI[r.categoria] || "🍽️";
-  const img = logoUrl ? `<img src="${escapeAttr(logoUrl)}" alt="" onerror="this.remove()">` : "";
+  const img = logoUrl ? `<img src="${escapeAttr(logoUrl)}" alt="" onerror="this.style.display='none'">` : "";
   return `<span class="title-logo"><span class="title-logo-emoji">${emoji}</span>${img}</span>`;
 }
 
