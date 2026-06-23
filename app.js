@@ -2756,8 +2756,8 @@ function showWelcome() {
         </svg>
       </div>
 
-      <h2 class="welcome-title">BOAS VINDAS ${escapeHtml(WELCOME_NAME)}</h2>
-      <p class="welcome-sub">Vamos dar uns rolês legais por Porto Alegre ✨</p>
+      <h2 class="welcome-title">SEJAM BEM-VINDOS</h2>
+      <p class="welcome-sub">Vamos explorar os melhores lugares de Porto Alegre ✨</p>
 
       <button class="welcome-cta" onclick="event.stopPropagation(); dismissWelcome()">Bora! 🎉</button>
     </div>`;
