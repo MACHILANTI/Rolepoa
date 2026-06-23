@@ -273,7 +273,11 @@ async function syncOnStartup() {
   if (!client) return;
   try {
     const { data, error } = await client.from("places").select("data");
-    if (error) { console.warn("Supabase load:", error.message); return; }
+    if (error) {
+      showErrorNotification("Falha ao carregar da nuvem. Usando dados locais.");
+      console.warn("Supabase load:", error.message);
+      return;
+    }
     if (data && data.length) {
       let incoming = data.map(row => migrate(row.data));
       // Remove lugares-demo que ainda estejam na nuvem e manda apagá-los de lá.
@@ -309,19 +313,20 @@ async function pushAll() {
   if (!client || !restaurants.length) return;
   const rows = restaurants.map(r => ({ id: r.id, data: r, updated_at: new Date().toISOString() }));
   const { error } = await client.from("places").upsert(rows);
-  if (error) console.warn("Supabase push:", error.message);
+  if (error) {
+    showErrorNotification("Falha ao salvar na nuvem. Dados locais preservados.");
+    console.warn("Supabase push:", error.message);
+  }
 }
 async function deleteFromCloud(id) {
   const client = sb();
   if (!client) return;
   const { error } = await client.from("places").delete().eq("id", id);
-  if (error) console.warn("Supabase delete:", error.message);
 }
 async function clearCloud() {
   const client = sb();
   if (!client) return;
   const { error } = await client.from("places").delete().neq("id", "");
-  if (error) console.warn("Supabase clear:", error.message);
 }
 // Remove os antigos lugares-demo que voltavam pela sincronização.
 async function purgeDemoSeeds() {
@@ -329,7 +334,6 @@ async function purgeDemoSeeds() {
   if (!client) return;
   for (const id of DEMO_IDS) {
     const { error } = await client.from("places").delete().eq("id", id);
-    if (error) console.warn(`Demo seed ${id}:`, error.message);
   }
 }
 
@@ -342,11 +346,10 @@ async function uploadToStorage(dataUrl, prefix) {
     const ext = (blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
     const path = `${prefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await client.storage.from("photos").upload(path, blob, { contentType: blob.type, upsert: false });
-    if (error) { console.warn("Storage upload:", error.message); return dataUrl; }
+    if (error) { return dataUrl; }
     const { data } = client.storage.from("photos").getPublicUrl(path);
     return data.publicUrl || dataUrl;
   } catch (e) {
-    console.warn("Storage upload falhou:", e);
     return dataUrl;
   }
 }
@@ -3008,6 +3011,30 @@ function toast(msg, type = "info") {
   t.innerHTML = `<span>${icon}</span><span>${escapeHtml(msg)}</span>`;
   container.appendChild(t);
   setTimeout(() => t.remove(), 3000);
+}
+
+function showErrorNotification(message, duration = 5000) {
+  const id = "error-" + Date.now();
+  const el = document.createElement("div");
+  el.id = id;
+  el.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #e53935;
+    color: #fff;
+    padding: 14px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 9999;
+    font-size: 14px;
+    max-width: 90%;
+    word-wrap: break-word;
+  `;
+  el.innerText = "❌ " + message;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), duration);
 }
 
 // ===== UTILS =====
