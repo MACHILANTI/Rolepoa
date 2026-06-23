@@ -517,7 +517,7 @@ function renderCard(r) {
 
   const igUrl = instagramProfileUrl(r);
   return `
-    <div class="restaurant-card" data-cat="${escapeAttr(r.categoria)}" onclick="cardClick(event, '${r.id}')">
+    <div class="restaurant-card ${r.status === 'ja-fui' ? 'visited' : ''}" data-cat="${escapeAttr(r.categoria)}" onclick="cardClick(event, '${r.id}')">
       <div class="card-image-wrapper">
         <div class="card-image" style="background-image: ${coverBg(r)}; background-position: ${escapeAttr(r.photoPos || 'center')}"></div>
         ${badgeHtml}
