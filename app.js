@@ -94,6 +94,15 @@ document.addEventListener("DOMContentLoaded", () => {
   setupModalClose();
 });
 
+// ===== SEÇÕES DO APP =====
+// STATE: variáveis globais (linhas ~63-70)
+// API (Supabase): sincronização e armazenamento na nuvem (linhas ~258-355)
+// RENDERING Cards: renderização da lista de cartões (linhas ~376-542)
+// RENDERING Modals: modais de detalhe, adicionar e editar (linhas ~1728-2150)
+// UI Interactions: filtros, busca, favoritos, etc (linhas ~683-786)
+// RATINGS: avaliações por estrelas (linhas ~1729-1993)
+// UTILITY: funções auxiliares de formatação e validação (linhas ~3040+)
+
 // Referência ao MutationObserver dos modais (para cleanup)
 let _modalObserver = null;
 
