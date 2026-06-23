@@ -11,7 +11,7 @@
   --secondary: #E05A47;
   --secondary-soft: rgba(224, 90, 71, 0.12);
   --text: #F3ECE7;
-  --text-muted: #A39389;
+  --text-muted: #BFA89F;
   --border: #2C221C;
   --border-strong: #3B2E25;
   --success: #4CAF50;
@@ -360,6 +360,29 @@ main {
   gap: 20px;
 }
 
+/* Estado vazio — quando não há restaurantes */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.empty-icon {
+  font-size: 64px;
+  display: block;
+  margin: 0;
+}
+.empty-text {
+  font-size: 14px;
+  margin: 0;
+  max-width: 300px;
+  color: var(--text);
+  font-weight: 500;
+}
+
 .restaurant-card {
   background: linear-gradient(180deg, var(--bg-soft), var(--bg-card));
   border-radius: 22px;
@@ -396,6 +419,19 @@ main {
 .restaurant-card[data-cat="Café"]        { --cat: #A9743F; }  /* marrom */
 .restaurant-card:active { transform: translateY(-2px) scale(0.99); }
 
+/* Destaque visual para restaurantes visitados */
+.restaurant-card.visited::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--success);
+  z-index: 4;
+  border-radius: 22px 22px 0 0;
+}
+
 /* Entrada em cascata — SÓ na primeira carga (grid recebe a classe .intro).
    Em re-renders normais (favoritar, filtrar, salvar) não anima, pra não piscar. */
 #restaurants-grid.intro .restaurant-card { animation: fadeUp 0.4s ease-out backwards; }
@@ -412,6 +448,17 @@ main {
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .card-image-wrapper {
@@ -446,10 +493,11 @@ main {
   flex-shrink: 0;
 }
 .title-price {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--primary);
   letter-spacing: 1px;
+  opacity: 0.9;
 }
 .title-logo {
   position: relative;
@@ -542,11 +590,11 @@ main {
 
 .card-title {
   font-family: var(--font-display);
-  font-size: 23px;
-  font-weight: 800;
-  margin-bottom: 5px;
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 12px;
   letter-spacing: -0.4px;
-  line-height: 1.15;
+  line-height: 1.2;
   color: #fff;
   text-shadow: 0 1px 0 rgba(0,0,0,0.35), 0 2px 5px rgba(0,0,0,0.45);
 }
@@ -768,6 +816,11 @@ main {
   box-shadow: var(--shadow-lg);
 }
 .modal.active .modal-content { transform: none; }
+
+/* Animação suave para modal de detalhe */
+#modal-detail.active .modal-content {
+  animation: slideUp 0.35s cubic-bezier(0.2, 0.6, 0.2, 1) forwards;
+}
 
 .modal-content::before {
   content: '';
