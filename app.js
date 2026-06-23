@@ -292,7 +292,7 @@ let _sb = null;
 function sb() {
   if (!_sb && window.supabase) {
     try { _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
-    catch (e) { console.warn("Supabase init falhou:", e); }
+    catch (e) { /* Supabase init falhou silenciosamente */ }
   }
   return _sb;
 }
@@ -305,7 +305,6 @@ async function syncOnStartup() {
     const { data, error } = await client.from("places").select("data");
     if (error) {
       showErrorNotification("Falha ao carregar da nuvem. Usando dados locais.");
-      console.warn("Supabase load:", error.message);
       return;
     }
     if (data && data.length) {
@@ -330,7 +329,7 @@ async function syncOnStartup() {
     } else if (restaurants.length) {
       await pushAll(); // nuvem vazia: primeira sincronização (sobe o local)
     }
-  } catch (e) { console.warn("Supabase indisponível:", e); }
+  } catch (e) { /* Supabase indisponível silenciosamente */ }
 }
 
 let _pushTimer = null;
@@ -345,7 +344,6 @@ async function pushAll() {
   const { error } = await client.from("places").upsert(rows);
   if (error) {
     showErrorNotification("Falha ao salvar na nuvem. Dados locais preservados.");
-    console.warn("Supabase push:", error.message);
   }
 }
 async function deleteFromCloud(id) {
