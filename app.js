@@ -282,7 +282,11 @@ async function syncOnStartup() {
       if (hadDemoCloud) DEMO_IDS.forEach(id => { try { deleteFromCloud(id); } catch (e) {} });
       // Só re-renderiza se a nuvem trouxer algo DIFERENTE do que já está na tela
       // (evita um segundo render desnecessário no boot, que causava piscada).
-      if (JSON.stringify(incoming) !== JSON.stringify(restaurants)) {
+      const incomingIds = new Set(incoming.map(r => r.id));
+      const localIds = new Set(restaurants.map(r => r.id));
+      const idsChanged = incomingIds.size !== localIds.size ||
+        ![...incomingIds].every(id => localIds.has(id));
+      if (idsChanged) {
         restaurants = incoming;
         saveLocal();
         populateFilters();
