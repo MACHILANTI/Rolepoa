@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Notifications</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    .test { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+    button { padding: 10px; margin: 5px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Error Notification Tests</h1>
+  <div id="toast-container"></div>
+  
+  <div class="test">
+    <h2>Test 1: Basic Error Notification</h2>
+    <button onclick="testBasicNotification()">Test Basic</button>
+    <p id="result1"></p>
+  </div>
+  
+  <div class="test">
+    <h2>Test 2: Multiple Notifications</h2>
+    <button onclick="testMultipleNotifications()">Test Multiple</button>
+    <p id="result2"></p>
+  </div>
+  
+  <div class="test">
+    <h2>Test 3: Auto-removal Timer</h2>
+    <button onclick="testAutoRemoval()">Test Auto-removal</button>
+    <p id="result3"></p>
+  </div>
+  
+  <script>
+    function showErrorNotification(message, duration = 5000) {
+      const id = "error-" + Date.now();
+      const el = document.createElement("div");
+      el.id = id;
+      el.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #e53935;
+        color: #fff;
+        padding: 14px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 9999;
+        font-size: 14px;
+        max-width: 90%;
+        word-wrap: break-word;
+      `;
+      el.innerText = "❌ " + message;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), duration);
+    }
+    
+    function testBasicNotification() {
+      showErrorNotification("This is a test error", 3000);
+      document.getElementById("result1").textContent = "✅ Notification shown - check top of page";
+    }
+    
+    function testMultipleNotifications() {
+      showErrorNotification("Error 1", 3000);
+      setTimeout(() => showErrorNotification("Error 2", 3000), 500);
+      setTimeout(() => showErrorNotification("Error 3", 3000), 1000);
+      document.getElementById("result2").textContent = "✅ Three notifications staggered - watch top";
+    }
+    
+    function testAutoRemoval() {
+      const countBefore = document.querySelectorAll('[id^="error-"]').length;
+      showErrorNotification("This will auto-remove in 2 seconds", 2000);
+      document.getElementById("result3").textContent = 
+        `✅ Notification shown. Elements before: ${countBefore}, now: ${countBefore + 1}. Watch it disappear in 2s.`;
+      setTimeout(() => {
+        const countAfter = document.querySelectorAll('[id^="error-"]').length;
+        document.getElementById("result3").textContent += ` (After 2s: ${countAfter} elements remaining)`;
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
