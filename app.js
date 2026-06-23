@@ -2756,8 +2756,8 @@ function showWelcome() {
         </svg>
       </div>
 
-      <h2 class="welcome-title">SEJAM BEM-VINDOS</h2>
-      <p class="welcome-sub">Vamos explorar os melhores lugares de Porto Alegre ✨</p>
+      <h2 class="welcome-title">Bem-Vindos</h2>
+      <p class="welcome-sub">Descubra os melhores lugares de Porto Alegre</p>
 
       <button class="welcome-cta" onclick="event.stopPropagation(); dismissWelcome()">Bora! 🎉</button>
     </div>`;
