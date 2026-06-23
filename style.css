@@ -2164,27 +2164,18 @@ select.form-control {
 .welcome-overlay {
   position: fixed; inset: 0; z-index: 2000;
   display: flex; align-items: center; justify-content: center;
-  padding: 24px;
-  background: linear-gradient(135deg,
-    rgba(80, 20, 40, 0.6) 0%,
-    rgba(120, 40, 20, 0.5) 25%,
-    rgba(60, 30, 80, 0.4) 50%,
-    rgba(20, 60, 100, 0.3) 100%),
-    radial-gradient(circle at 50% 40%, rgba(255, 140, 60, 0.15), transparent 60%);
+  padding: 20px;
+  background: radial-gradient(ellipse at 50% 50%,
+    rgba(100, 50, 150, 0.4) 0%,
+    rgba(30, 60, 120, 0.5) 50%,
+    rgba(10, 10, 30, 0.9) 100%);
   opacity: 0;
   transition: opacity 0.5s ease;
 }
-/* Desfoque só no desktop (no celular pesa demais). */
 @media (hover: hover) and (pointer: fine) {
   .welcome-overlay {
-    background: linear-gradient(135deg,
-      rgba(80, 20, 40, 0.5) 0%,
-      rgba(120, 40, 20, 0.4) 25%,
-      rgba(60, 30, 80, 0.3) 50%,
-      rgba(20, 60, 100, 0.2) 100%),
-      radial-gradient(circle at 50% 40%, rgba(255, 140, 60, 0.2), transparent 60%);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 }
 .welcome-overlay.show { opacity: 1; }
@@ -2197,25 +2188,23 @@ select.form-control {
 .welcome-card {
   position: relative; overflow: hidden;
   background: linear-gradient(135deg,
-    rgba(30, 15, 10, 0.95) 0%,
-    rgba(40, 20, 15, 0.93) 50%,
-    rgba(25, 12, 8, 0.95) 100%);
-  border: 2px solid;
-  border-image: linear-gradient(135deg, rgba(255, 200, 100, 0.4), rgba(224, 90, 71, 0.3), rgba(100, 50, 150, 0.2)) 1;
-  border-radius: 32px;
-  padding: 40px 32px 32px;
-  max-width: 380px; width: 100%;
+    rgba(20, 15, 40, 0.9) 0%,
+    rgba(30, 25, 60, 0.85) 50%,
+    rgba(15, 20, 45, 0.9) 100%);
+  border: 2px solid rgba(245, 166, 35, 0.3);
+  border-radius: 40px;
+  padding: 50px 40px;
+  max-width: 420px; width: 100%;
   text-align: center;
   box-shadow:
-    0 50px 120px rgba(0, 0, 0, 0.9),
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 0 rgba(255, 100, 50, 0.05);
+    0 0 80px rgba(245, 166, 35, 0.2),
+    0 40px 100px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  transform: scale(0.7) translateY(24px); opacity: 0;
+  transform: scale(0.6) translateY(30px); opacity: 0;
   user-select: none;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .welcome-overlay.show .welcome-card {
   animation: wCardIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
@@ -2232,59 +2221,135 @@ select.form-control {
   100% { transform: scale(0.85) translateY(16px); opacity: 0; }
 }
 
-/* Glow épico girando atrás */
+/* Background épico com gradiente */
+.welcome-gradient {
+  position: absolute; inset: 0;
+  background: linear-gradient(45deg,
+    rgba(245, 166, 35, 0.05) 0%,
+    rgba(224, 90, 71, 0.03) 50%,
+    rgba(100, 150, 200, 0.05) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Stars animadas */
+.welcome-stars {
+  position: absolute; inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.star-particle {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: #fff;
+  border-radius: 50%;
+  animation: twinkle 3s infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* Glow épico */
 .welcome-glow {
-  position: absolute; inset: -100% -50%;
-  background: conic-gradient(from 0deg,
-    rgba(220, 60, 30, 0.25),
-    rgba(255, 166, 35, 0.20),
-    rgba(180, 30, 80, 0.28),
-    rgba(255, 166, 35, 0.18),
-    rgba(220, 60, 30, 0.25));
-  filter: blur(60px);
-  animation: glowSpin 12s linear infinite;
+  position: absolute; inset: -50%;
+  background: radial-gradient(circle,
+    rgba(245, 166, 35, 0.15),
+    rgba(224, 90, 71, 0.08),
+    transparent 70%);
+  filter: blur(80px);
+  animation: glowPulse 4s ease-in-out infinite;
   z-index: 0; pointer-events: none;
 }
-@keyframes glowSpin {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(1.05); }
-  100% { transform: rotate(360deg) scale(1); }
-}
-.welcome-card > *:not(.welcome-glow) { position: relative; z-index: 1; }
 
-/* Textos épicos */
+@keyframes glowPulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.welcome-card > * { position: relative; z-index: 2; }
+
+/* Conteúdo */
+.welcome-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+/* Ícone grande */
+.welcome-icon {
+  font-size: 80px;
+  animation: iconBounce 2.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  display: block;
+}
+
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(-3deg); }
+  75% { transform: translateY(-8px) rotate(3deg); }
+}
+
+/* Título épico */
 .welcome-title {
   font-family: var(--font-display);
-  font-size: 32px; font-weight: 900;
-  letter-spacing: -0.5px;
+  font-size: 48px; font-weight: 900;
+  letter-spacing: -1px;
   background: linear-gradient(110deg,
-    #fff8d7 0%,
-    #ffd87a 15%,
-    var(--primary) 30%,
-    #ff8b5a 45%,
-    #e05a47 60%,
-    #d04040 75%,
-    #ffd87a 100%);
+    #fff8d7, #ffd87a, #f5a623, #e05a47);
   background-size: 300% 100%;
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shimmerPremium 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
-  margin-bottom: 8px;
-  text-shadow: 0 2px 8px rgba(255, 140, 60, 0.3);
-}
-@keyframes shimmerPremium {
-  0% { background-position: 0% 0; }
-  50% { background-position: 300% 0; }
-  100% { background-position: 300% 0; }
+  animation: shineFlow 3.5s ease-in-out infinite;
+  margin: 0;
 }
 
+@keyframes shineFlow {
+  0% { background-position: 0%; }
+  50% { background-position: 300%; }
+  100% { background-position: 300%; }
+}
+
+/* Subtítulo */
 .welcome-sub {
-  color: rgba(191, 168, 159, 0.95);
-  font-size: 14px;
+  color: rgba(243, 236, 231, 0.85);
+  font-size: 15px;
   line-height: 1.6;
-  margin-bottom: 24px;
+  margin: 0;
   font-weight: 500;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
+  max-width: 300px;
+}
+
+/* Features (3 itens) */
+.welcome-features {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.feature {
+  font-size: 13px;
+  padding: 8px 16px;
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+  border-radius: 20px;
+  color: rgba(243, 236, 231, 0.9);
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+.feature:hover {
+  background: rgba(245, 166, 35, 0.2);
+  border-color: rgba(245, 166, 35, 0.5);
+  transform: translateY(-2px);
 }
 
 /* ===== MEDALHÃO PÔR DO SOL DO GUAÍBA ===== */

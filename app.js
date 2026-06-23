@@ -2684,85 +2684,40 @@ function showWelcome() {
   ov.className = "welcome-overlay";
   ov.innerHTML = `
     <div class="welcome-card" onclick="dismissWelcome()">
-      <div class="welcome-glow"></div>
-      <div class="welcome-fireworks" id="welcome-fireworks"></div>
-      <div class="welcome-emojis" id="welcome-emojis"></div>
+      <div class="welcome-stars" id="welcome-stars"></div>
+      <div class="welcome-gradient"></div>
 
-      <div class="welcome-badge">
-        <svg class="sunset-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <radialGradient id="skyGrad" cx="50%" cy="35%" r="85%">
-              <stop offset="0%"   stop-color="#fff5d6"/>
-              <stop offset="20%"  stop-color="#ffe6a3"/>
-              <stop offset="45%"  stop-color="#ff9d5c"/>
-              <stop offset="70%"  stop-color="#d6504a"/>
-              <stop offset="85%"  stop-color="#8b2e3f"/>
-              <stop offset="100%" stop-color="#3a1620"/>
-            </radialGradient>
-            <radialGradient id="sunGrad" cx="50%" cy="40%" r="55%">
-              <stop offset="0%"   stop-color="#fffaeb"/>
-              <stop offset="30%"  stop-color="#ffd166"/>
-              <stop offset="70%"  stop-color="#ff9d3c"/>
-              <stop offset="100%" stop-color="#ff7a3c"/>
-            </radialGradient>
-            <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stop-color="#ff9d5c"/>
-              <stop offset="35%"  stop-color="#e67055"/>
-              <stop offset="70%"  stop-color="#8b2e3f"/>
-              <stop offset="100%" stop-color="#4a1620"/>
-            </linearGradient>
-            <clipPath id="circClip"><circle cx="100" cy="100" r="92"/></clipPath>
-          </defs>
+      <div class="welcome-content">
+        <div class="welcome-icon">🍷</div>
+        <h2 class="welcome-title">Bem-Vindos</h2>
+        <p class="welcome-sub">Descubra os melhores lugares de Porto Alegre</p>
 
-          <g clip-path="url(#circClip)">
-            <rect x="0" y="0" width="200" height="200" fill="url(#skyGrad)"/>
+        <div class="welcome-features">
+          <span class="feature">🍽️ Restaurantes</span>
+          <span class="feature">🎉 Experiências</span>
+          <span class="feature">🗺️ Explorar</span>
+        </div>
 
-            <!-- raios suaves girando atrás do sol -->
-            <g class="sun-rays" opacity="0.35">
-              <path d="M100 100 L100 8 L112 8 Z" fill="rgba(255,240,200,0.5)"/>
-              <path d="M100 100 L60 18 L74 14 Z" fill="rgba(255,240,200,0.4)"/>
-              <path d="M100 100 L140 18 L126 14 Z" fill="rgba(255,240,200,0.4)"/>
-              <path d="M100 100 L18 60 L16 74 Z" fill="rgba(255,240,200,0.3)"/>
-              <path d="M100 100 L182 60 L184 74 Z" fill="rgba(255,240,200,0.3)"/>
-            </g>
-
-            <!-- sol -->
-            <circle class="sun" cx="100" cy="94" r="33" fill="url(#sunGrad)"/>
-
-            <!-- pássaros -->
-            <g class="birds" stroke="#3a1620" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.6">
-              <path d="M52 56 q4 -4 8 0 q4 -4 8 0"/>
-              <path d="M70 46 q3 -3 6 0 q3 -3 6 0"/>
-            </g>
-
-            <!-- água do Guaíba -->
-            <rect x="0" y="122" width="200" height="78" fill="url(#waterGrad)"/>
-            <!-- morros / silhueta -->
-            <path d="M0 124 Q40 110 78 122 T150 116 T200 124 L200 130 L0 130 Z" fill="#46202c" opacity="0.75"/>
-
-            <!-- reflexo do sol na água (cacos cintilando) -->
-            <g class="reflection" fill="rgba(255,224,160,0.85)">
-              <rect class="rf r1" x="86" y="130" width="28" height="3" rx="1.5"/>
-              <rect class="rf r2" x="82" y="140" width="36" height="3" rx="1.5"/>
-              <rect class="rf r3" x="88" y="150" width="24" height="2.5" rx="1.2"/>
-              <rect class="rf r4" x="80" y="162" width="40" height="2.5" rx="1.2"/>
-              <rect class="rf r5" x="86" y="174" width="28" height="2" rx="1"/>
-            </g>
-          </g>
-
-          <!-- aro do medalhão -->
-          <circle cx="100" cy="100" r="92" fill="none" stroke="rgba(255,216,140,0.55)" stroke-width="2.5"/>
-          <circle cx="100" cy="100" r="92" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="6"/>
-        </svg>
+        <button class="welcome-cta" onclick="event.stopPropagation(); dismissWelcome()">Começar Agora →</button>
       </div>
 
-      <h2 class="welcome-title">Bem-Vindos</h2>
-      <p class="welcome-sub">Descubra os melhores lugares de Porto Alegre</p>
-
-      <button class="welcome-cta" onclick="event.stopPropagation(); dismissWelcome()">Bora! 🎉</button>
+      <div class="welcome-glow"></div>
     </div>`;
   document.body.appendChild(ov);
   requestAnimationFrame(() => ov.classList.add("show"));
+
+  // Gerar stars animadas
+  const starsHost = ov.querySelector("#welcome-stars");
+  if (starsHost) {
+    for (let i = 0; i < 30; i++) {
+      const star = document.createElement("div");
+      star.className = "star-particle";
+      star.style.left = Math.random() * 100 + "%";
+      star.style.top = Math.random() * 100 + "%";
+      star.style.animationDelay = (Math.random() * 3) + "s";
+      starsHost.appendChild(star);
+    }
+  }
 
   const fwHost = ov.querySelector("#welcome-fireworks");
   const emHost = ov.querySelector("#welcome-emojis");
