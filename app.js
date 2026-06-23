@@ -94,6 +94,9 @@ document.addEventListener("DOMContentLoaded", () => {
   setupModalClose();
 });
 
+// Referência ao MutationObserver dos modais (para cleanup)
+let _modalObserver = null;
+
 // Remove de vez os lugares-demo (sementes antigas) que voltavam pela sincronização.
 // Limpa o aparelho e manda apagar da nuvem também.
 function purgeDemoSeeds() {
@@ -112,12 +115,19 @@ function setupModalScrollLock() {
     const open = document.querySelector(".modal.active") || document.getElementById("welcome-overlay");
     document.body.classList.toggle("modal-open", !!open);
   };
-  const obs = new MutationObserver(sync);
+  _modalObserver = new MutationObserver(sync);
   document.querySelectorAll(".modal").forEach(m =>
-    obs.observe(m, { attributes: true, attributeFilter: ["class"] }));
+    _modalObserver.observe(m, { attributes: true, attributeFilter: ["class"] }));
   // Observa também a entrada/saída da tela de boas-vindas (criada dinamicamente).
   new MutationObserver(sync).observe(document.body, { childList: true });
   sync();
+}
+
+function cleanupModalScrollLock() {
+  if (_modalObserver) {
+    _modalObserver.disconnect();
+    _modalObserver = null;
+  }
 }
 
 // ===== MODAL CLOSE LISTENER (removível) =====
