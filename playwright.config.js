@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:8000',
+    baseURL: 'http://localhost:5500',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure'
   },
@@ -18,8 +18,8 @@ export default defineConfig({
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
   webServer: {
-    command: 'python -m http.server 8000',
-    url: 'http://localhost:8000',
+    command: 'node .serve.js',
+    url: 'http://localhost:5500',
     reuseExistingServer: !process.env.CI,
   },
 });
