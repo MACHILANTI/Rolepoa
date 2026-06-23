@@ -2165,16 +2165,26 @@ select.form-control {
   position: fixed; inset: 0; z-index: 2000;
   display: flex; align-items: center; justify-content: center;
   padding: 24px;
-  background: radial-gradient(ellipse at 50% 30%, rgba(120, 40, 20, 0.55), rgba(8,6,5,0.99));
+  background: linear-gradient(135deg,
+    rgba(80, 20, 40, 0.6) 0%,
+    rgba(120, 40, 20, 0.5) 25%,
+    rgba(60, 30, 80, 0.4) 50%,
+    rgba(20, 60, 100, 0.3) 100%),
+    radial-gradient(circle at 50% 40%, rgba(255, 140, 60, 0.15), transparent 60%);
   opacity: 0;
   transition: opacity 0.5s ease;
 }
-/* Desfoque só no desktop (no celular pesa demais junto com fogos/confete). */
+/* Desfoque só no desktop (no celular pesa demais). */
 @media (hover: hover) and (pointer: fine) {
   .welcome-overlay {
-    background: radial-gradient(ellipse at 50% 30%, rgba(120, 40, 20, 0.4), rgba(8,6,5,0.97));
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    background: linear-gradient(135deg,
+      rgba(80, 20, 40, 0.5) 0%,
+      rgba(120, 40, 20, 0.4) 25%,
+      rgba(60, 30, 80, 0.3) 50%,
+      rgba(20, 60, 100, 0.2) 100%),
+      radial-gradient(circle at 50% 40%, rgba(255, 140, 60, 0.2), transparent 60%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 }
 .welcome-overlay.show { opacity: 1; }
@@ -2186,16 +2196,26 @@ select.form-control {
 
 .welcome-card {
   position: relative; overflow: hidden;
-  background: linear-gradient(160deg, #1f1410, #160f0a);
-  border: 1px solid rgba(245,166,35,0.25);
-  border-radius: 28px;
-  padding: 36px 30px 28px;
-  max-width: 360px; width: 100%;
+  background: linear-gradient(135deg,
+    rgba(30, 15, 10, 0.95) 0%,
+    rgba(40, 20, 15, 0.93) 50%,
+    rgba(25, 12, 8, 0.95) 100%);
+  border: 2px solid;
+  border-image: linear-gradient(135deg, rgba(255, 200, 100, 0.4), rgba(224, 90, 71, 0.3), rgba(100, 50, 150, 0.2)) 1;
+  border-radius: 32px;
+  padding: 40px 32px 32px;
+  max-width: 380px; width: 100%;
   text-align: center;
-  box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.06);
+  box-shadow:
+    0 50px 120px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(255, 100, 50, 0.05);
   cursor: pointer;
   transform: scale(0.7) translateY(24px); opacity: 0;
   user-select: none;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 .welcome-overlay.show .welcome-card {
   animation: wCardIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
@@ -2212,66 +2232,94 @@ select.form-control {
   100% { transform: scale(0.85) translateY(16px); opacity: 0; }
 }
 
-/* Glow girando atrás */
+/* Glow épico girando atrás */
 .welcome-glow {
-  position: absolute; inset: -60% -20%;
+  position: absolute; inset: -100% -50%;
   background: conic-gradient(from 0deg,
-    rgba(180,50,30,0.18), rgba(245,166,35,0.14),
-    rgba(155,26,58,0.20), rgba(245,166,35,0.10),
-    rgba(180,50,30,0.18));
-  filter: blur(40px);
-  animation: glowSpin 10s linear infinite;
+    rgba(220, 60, 30, 0.25),
+    rgba(255, 166, 35, 0.20),
+    rgba(180, 30, 80, 0.28),
+    rgba(255, 166, 35, 0.18),
+    rgba(220, 60, 30, 0.25));
+  filter: blur(60px);
+  animation: glowSpin 12s linear infinite;
   z-index: 0; pointer-events: none;
 }
-@keyframes glowSpin { to { transform: rotate(360deg); } }
+@keyframes glowSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.05); }
+  100% { transform: rotate(360deg) scale(1); }
+}
 .welcome-card > *:not(.welcome-glow) { position: relative; z-index: 1; }
 
-/* Textos */
+/* Textos épicos */
 .welcome-title {
   font-family: var(--font-display);
-  font-size: 26px; font-weight: 800;
-  background: linear-gradient(100deg, #ffd87a, var(--primary), #e05a47, #ffd87a);
-  background-size: 280% 100%;
+  font-size: 32px; font-weight: 900;
+  letter-spacing: -0.5px;
+  background: linear-gradient(110deg,
+    #fff8d7 0%,
+    #ffd87a 15%,
+    var(--primary) 30%,
+    #ff8b5a 45%,
+    #e05a47 60%,
+    #d04040 75%,
+    #ffd87a 100%);
+  background-size: 300% 100%;
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shimmer 3.5s linear infinite;
-  margin-bottom: 6px;
+  animation: shimmerPremium 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 8px rgba(255, 140, 60, 0.3);
 }
-@keyframes shimmer { to { background-position: 280% 0; } }
+@keyframes shimmerPremium {
+  0% { background-position: 0% 0; }
+  50% { background-position: 300% 0; }
+  100% { background-position: 300% 0; }
+}
 
 .welcome-sub {
-  color: var(--text-muted);
-  font-size: 13.5px;
-  line-height: 1.55;
-  margin-bottom: 0;
+  color: rgba(191, 168, 159, 0.95);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
 /* ===== MEDALHÃO PÔR DO SOL DO GUAÍBA ===== */
 .welcome-badge {
   position: relative;
-  width: 150px; height: 150px;
-  margin: 18px auto 16px;
-  filter: drop-shadow(0 12px 30px rgba(255,120,60,0.35));
-  animation: badgeFloat 4s ease-in-out infinite;
+  width: 160px; height: 160px;
+  margin: 20px auto 20px;
+  filter: drop-shadow(0 8px 20px rgba(255, 140, 60, 0.25))
+          drop-shadow(0 20px 50px rgba(255, 80, 40, 0.2));
+  animation: badgeFloat 4.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 @keyframes badgeFloat {
-  0%, 100% { transform: translateY(0) rotate(-0.5deg); }
-  50%      { transform: translateY(-7px) rotate(0.5deg); }
+  0%   { transform: translateY(0) rotate(-1deg); }
+  25%  { transform: translateY(-8px) rotate(0deg); }
+  50%  { transform: translateY(-10px) rotate(1deg); }
+  75%  { transform: translateY(-6px) rotate(0deg); }
+  100% { transform: translateY(0) rotate(-1deg); }
 }
 .sunset-svg { width: 100%; height: 100%; display: block; overflow: visible; }
 
-/* halo pulsando atrás do medalhão */
+/* halo épico pulsando atrás do medalhão */
 .welcome-badge::before {
   content: "";
-  position: absolute; inset: -16px;
+  position: absolute; inset: -24px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,160,80,0.35), rgba(255,160,80,0) 70%);
-  animation: haloPulse 2.6s ease-in-out infinite;
+  background: radial-gradient(circle,
+    rgba(255, 160, 80, 0.5),
+    rgba(255, 100, 60, 0.25) 40%,
+    rgba(255, 160, 80, 0) 70%);
+  animation: haloPulse 3s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
   z-index: -1;
 }
 @keyframes haloPulse {
-  0%, 100% { transform: scale(0.9); opacity: 0.55; }
-  50%      { transform: scale(1.08); opacity: 0.9; }
+  0%, 100% { transform: scale(0.85); opacity: 0.4; }
+  50%      { transform: scale(1.15); opacity: 0.95; }
 }
 
 .sun { animation: sunGlow 2.8s ease-in-out infinite; transform-origin: 100px 94px; }
@@ -2339,25 +2387,37 @@ select.form-control {
 
 /* ===== BOTÃO BORA ===== */
 .welcome-cta {
-  margin-top: 20px;
+  margin-top: 24px;
   border: none;
   cursor: pointer;
   font-family: var(--font-display, inherit);
-  font-size: 16px; font-weight: 800;
-  color: #2a1208;
-  padding: 13px 34px;
+  font-size: 17px; font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #1a0800;
+  padding: 15px 40px;
   border-radius: 999px;
-  background: linear-gradient(100deg, #ffd87a, #f5a623 55%, #e05a47);
-  background-size: 200% 100%;
-  box-shadow: 0 10px 26px rgba(245,166,35,0.45), inset 0 1px 0 rgba(255,255,255,0.5);
-  animation: ctaShine 3s linear infinite, ctaPulse 2.2s ease-in-out infinite;
-  transition: transform 0.12s ease;
+  background: linear-gradient(110deg, #fff8d7, #ffd87a, #f5a623, #e05a47, #ffd87a);
+  background-size: 250% 100%;
+  box-shadow:
+    0 2px 8px rgba(255, 140, 60, 0.4),
+    0 12px 32px rgba(255, 100, 40, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  animation: ctaPremium 3.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.welcome-cta:hover { transform: scale(1.06); }
-.welcome-cta:active { transform: scale(0.96); }
-@keyframes ctaShine { to { background-position: 200% 0; } }
+.welcome-cta:hover { transform: translateY(-2px); box-shadow:
+    0 4px 12px rgba(255, 140, 60, 0.5),
+    0 16px 40px rgba(255, 100, 40, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6); }
+.welcome-cta:active { transform: translateY(0); }
+@keyframes ctaPremium {
+  0% { background-position: 0% 0; }
+  50% { background-position: 250% 0; }
+  100% { background-position: 250% 0; }
+}
 @keyframes ctaPulse {
-  0%, 100% { box-shadow: 0 10px 26px rgba(245,166,35,0.45), inset 0 1px 0 rgba(255,255,255,0.5); }
+  0%, 100% { box-shadow: 0 2px 8px rgba(255, 140, 60, 0.4), 0 12px 32px rgba(255, 100, 40, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.6); }
   50%      { box-shadow: 0 12px 34px rgba(245,166,35,0.7),  inset 0 1px 0 rgba(255,255,255,0.5); }
 }
 

@@ -2691,20 +2691,25 @@ function showWelcome() {
       <div class="welcome-badge">
         <svg class="sunset-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <radialGradient id="skyGrad" cx="50%" cy="40%" r="80%">
-              <stop offset="0%"   stop-color="#ffe6a3"/>
-              <stop offset="32%"  stop-color="#ff9d5c"/>
-              <stop offset="66%"  stop-color="#d6504a"/>
-              <stop offset="100%" stop-color="#511f30"/>
+            <radialGradient id="skyGrad" cx="50%" cy="35%" r="85%">
+              <stop offset="0%"   stop-color="#fff5d6"/>
+              <stop offset="20%"  stop-color="#ffe6a3"/>
+              <stop offset="45%"  stop-color="#ff9d5c"/>
+              <stop offset="70%"  stop-color="#d6504a"/>
+              <stop offset="85%"  stop-color="#8b2e3f"/>
+              <stop offset="100%" stop-color="#3a1620"/>
             </radialGradient>
-            <radialGradient id="sunGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%"   stop-color="#fff6d8"/>
-              <stop offset="55%"  stop-color="#ffd166"/>
-              <stop offset="100%" stop-color="#ff9d3c"/>
+            <radialGradient id="sunGrad" cx="50%" cy="40%" r="55%">
+              <stop offset="0%"   stop-color="#fffaeb"/>
+              <stop offset="30%"  stop-color="#ffd166"/>
+              <stop offset="70%"  stop-color="#ff9d3c"/>
+              <stop offset="100%" stop-color="#ff7a3c"/>
             </radialGradient>
             <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stop-color="#f0975a"/>
-              <stop offset="100%" stop-color="#6e2536"/>
+              <stop offset="0%"   stop-color="#ff9d5c"/>
+              <stop offset="35%"  stop-color="#e67055"/>
+              <stop offset="70%"  stop-color="#8b2e3f"/>
+              <stop offset="100%" stop-color="#4a1620"/>
             </linearGradient>
             <clipPath id="circClip"><circle cx="100" cy="100" r="92"/></clipPath>
           </defs>
