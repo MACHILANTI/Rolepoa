@@ -60,6 +60,27 @@ const CATEGORIA_EMOJI = {
   "Pub":"🍺","Carnes":"🥩","Brasileiro":"🇧🇷","Vegetariano":"🥗","Doceria":"🍰","Outro":"🍽️"
 };
 
+// ===== CONSTANTES =====
+// Delays de animação e sincronização (em ms)
+const DELAY_MAP_RENDER = 60;      // re-renderizar mapa após resize
+const DELAY_CLOUD_SYNC = 800;     // sincronizar com nuvem (debounced)
+const INTERVAL_FIREWORKS = 2400;  // intervalo de explosões de fogos de artifício
+
+// IDs dos modais
+const MODAL_IDS = {
+  detail: "modal-detail",
+  add: "modal-add",
+  menu: "modal-menu",
+  stats: "modal-stats",
+  confirm: "modal-confirm"
+};
+
+// Classes CSS importantes
+const CSS_CLASSES = {
+  modalActive: "active",
+  modalOpen: "modal-open"
+};
+
 // ===== ESTADO =====
 let restaurants = [];
 let currentFilter = "todos";
@@ -315,7 +336,7 @@ async function syncOnStartup() {
 let _pushTimer = null;
 function schedulePush() {
   clearTimeout(_pushTimer);
-  _pushTimer = setTimeout(pushAll, 800);
+  _pushTimer = setTimeout(pushAll, DELAY_CLOUD_SYNC);
 }
 async function pushAll() {
   const client = sb();
@@ -563,7 +584,7 @@ function setView(view) {
   if (view === "map") {
     if (!initMap()) return;
     // O mapa estava escondido; precisa recalcular o tamanho.
-    setTimeout(() => { _map.invalidateSize(); render(); }, 60);
+    setTimeout(() => { _map.invalidateSize(); render(); }, DELAY_MAP_RENDER);
   }
 }
 
@@ -1850,7 +1871,7 @@ function editRating(id, ratingId) {
   if (!loadRating(id, ratingId)) return;
   renderRateForm();
   const el = document.getElementById("rate-form-area");
-  if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+  if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), DELAY_MAP_RENDER);
 }
 
 // Estado padrão ao abrir o lugar: mostra as estrelas da ÚLTIMA pessoa (visualização);
@@ -2744,7 +2765,7 @@ function showWelcome() {
   const emHost = ov.querySelector("#welcome-emojis");
   setTimeout(() => { burstConfetti(); launchFireworks(fwHost, 5); floatEmojis(emHost); }, 450);
   // mantém os fogos pipocando enquanto a tela estiver aberta
-  ov._fwTimer = setInterval(() => launchFireworks(fwHost, 3), 2400);
+  ov._fwTimer = setInterval(() => launchFireworks(fwHost, 3), INTERVAL_FIREWORKS);
 }
 
 // Fogos de artifício: bursts de partículas dentro de um container (%).
