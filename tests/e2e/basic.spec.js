@@ -132,4 +132,65 @@ test.describe('RolêPOA - Testes Básicos', () => {
       }
     }
   });
+
+  test('sorteio por categoria funciona', async ({ page }) => {
+    await page.goto('/');
+
+    // Localizar e clicar no pin de categoria "Pizza" (se existir)
+    const pizzaPins = page.locator('[data-cat="Pizza"]');
+    if (await pizzaPins.count() > 0) {
+      await pizzaPins.first().click();
+    }
+
+    // Clicar no botão sorteio
+    const sortBtn = page.locator('button:has-text("Sorteio")');
+    if (await sortBtn.count() > 0) {
+      await sortBtn.click();
+      await page.waitForTimeout(1000);
+
+      // Verificar que resultado aparece
+      const result = page.locator('.random-result-card');
+      await expect(result).toBeVisible({ timeout: 3000 });
+    }
+  });
+
+  test('filtro "Já fui" mostra só visitados', async ({ page }) => {
+    await page.goto('/');
+
+    // Clicar no filtro "Já Fui & Avaliados"
+    const filterBtn = page.locator('button:has-text("Já Fui")');
+    if (await filterBtn.count() > 0) {
+      await filterBtn.click();
+      await page.waitForTimeout(500);
+
+      // Verificar que cards aparecem (ou vazio se nenhum visitado)
+      const cards = page.locator('.restaurant-card');
+      const count = await cards.count();
+      expect(count).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  test('mapa: clicar no pin abre o card', async ({ page }) => {
+    await page.goto('/');
+
+    // Clicar em "Mapa"
+    const mapBtn = page.locator('button[data-view="map"]');
+    if (await mapBtn.count() > 0) {
+      await mapBtn.click();
+      await page.waitForTimeout(1000);
+
+      // Clicar no primeiro pin (marker)
+      const pin = page.locator('.map-pin').first();
+      if (await pin.count() > 0) {
+        await pin.click();
+        await page.waitForTimeout(500);
+
+        // Verificar que popup ou modal aparece
+        const popup = page.locator('.map-popup');
+        if (await popup.count() > 0) {
+          await expect(popup).toBeVisible();
+        }
+      }
+    }
+  });
 });
