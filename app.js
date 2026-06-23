@@ -91,6 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
   purgeDemoSeeds();
   maybeShowWelcome();
   setupModalScrollLock();
+  setupModalClose();
 });
 
 // Remove de vez os lugares-demo (sementes antigas) que voltavam pela sincronização.
@@ -117,6 +118,25 @@ function setupModalScrollLock() {
   // Observa também a entrada/saída da tela de boas-vindas (criada dinamicamente).
   new MutationObserver(sync).observe(document.body, { childList: true });
   sync();
+}
+
+// ===== MODAL CLOSE LISTENER (removível) =====
+let _modalCloseListener = null;
+
+function setupModalClose() {
+  _modalCloseListener = e => {
+    if (e.target.classList?.contains("modal")) {
+      e.target.classList.remove("active");
+    }
+  };
+  document.addEventListener("click", _modalCloseListener);
+}
+
+function cleanupModalClose() {
+  if (_modalCloseListener) {
+    document.removeEventListener("click", _modalCloseListener);
+    _modalCloseListener = null;
+  }
 }
 
 // Migração de campos novos
@@ -2987,10 +3007,3 @@ function formatDateBR(iso) {
   const [y,m,d] = iso.split("-");
   return `${d}/${m}/${y}`;
 }
-
-// ===== FECHAR MODAL CLICANDO FORA =====
-document.addEventListener("click", e => {
-  if (e.target.classList?.contains("modal")) {
-    e.target.classList.remove("active");
-  }
-});
