@@ -1811,7 +1811,7 @@ function rateListHTML(r) {
       </div>
       <div class="rate-card-meta">${drink ? `${drink.emoji} ${drink.label}` : ""}${drink && rt.date ? " · " : ""}${rt.date ? formatDateBR(rt.date) : ""} · toque pra ver as notas</div>
       ${rt.comments ? `<div class="rate-card-comment">"${escapeHtml(rt.comments)}"</div>` : ""}
-      <div class="rate-card-detail">${previewStarsHTML(rt)}</div>
+      <div class="rate-card-detail">${renderStarsHTML(rt, false)}</div>
       <div class="rate-card-actions">
         <button type="button" onclick="editRating('${r.id}','${rt.id}')">✏️ Editar</button>
         <button type="button" class="danger" onclick="deleteRating('${r.id}','${rt.id}')">🗑️ Excluir</button>
@@ -1869,21 +1869,47 @@ function cancelRating() {
   renderRateForm();
 }
 
-// Estrelas só-leitura (visualização da última avaliação).
-function previewStarsHTML(rt) {
-  return RATE_CATS.map(cat => {
-    const v = rt[cat.key] || 0;
-    const stars = [1, 2, 3, 4, 5].map(n => `<span class="star ro ${n <= v ? "on" : ""}">★</span>`).join("");
-    let tag = "";
-    if (cat.key === "bebida" && rt.bebidaTipo) {
-      const d = DRINK_TYPES.find(x => x.key === rt.bebidaTipo);
-      if (d) tag = ` <span class="drink-tag">${d.emoji} ${d.label}</span>`;
-    }
-    return `<div class="rate-row">
-      <span class="rate-label">${cat.emoji} ${cat.label}${tag}</span>
-      <span class="rate-stars">${stars}</span>
-    </div>`;
-  }).join("");
+// Renderiza HTML das estrelas (ambos os modos: leitura e edição).
+// Se editMode=false: mostra estrelas só-leitura da avaliação `rating`.
+// Se editMode=true: renderiza campo interativo no elemento DOM (detail-rate-body).
+function renderStarsHTML(rating, editMode = false) {
+  if (editMode) {
+    // Modo editável: gera HTML para inserir em detail-rate-body
+    if (!_detailWork) return "";
+    const work = _detailWork;
+    return RATE_CATS.map(cat => {
+      const v = work.vals[cat.key] || 0;
+      const stars = [1, 2, 3, 4, 5].map(n =>
+        `<button type="button" class="star ${n <= v ? "on" : ""}" onclick="setStar('${cat.key}', ${n})" onmouseover="previewStars('${cat.key}', ${n})" onmouseout="previewStars('${cat.key}', ${v})" title="${n} estrela${n > 1 ? "s" : ""}">★</button>`
+      ).join("");
+      let extra = "";
+      if (cat.key === "bebida") {
+        extra = `<div class="drink-types">${DRINK_TYPES.map(d =>
+          `<button type="button" class="drink-pin ${work.bebidaTipo === d.key ? "active" : ""}" onclick="setDrinkType('${d.key}')">${d.emoji} ${d.label}</button>`
+        ).join("")}</div>`;
+      }
+      return `<div class="rate-row" data-cat="${cat.key}">
+        <span class="rate-label">${cat.emoji} ${cat.label}</span>
+        <span class="rate-stars">${stars}</span>
+      </div>${extra}`;
+    }).join("");
+  } else {
+    // Modo leitura: visualização de avaliação existente
+    if (!rating) return "";
+    return RATE_CATS.map(cat => {
+      const v = rating[cat.key] || 0;
+      const stars = [1, 2, 3, 4, 5].map(n => `<span class="star ro ${n <= v ? "on" : ""}">★</span>`).join("");
+      let tag = "";
+      if (cat.key === "bebida" && rating.bebidaTipo) {
+        const d = DRINK_TYPES.find(x => x.key === rating.bebidaTipo);
+        if (d) tag = ` <span class="drink-tag">${d.emoji} ${d.label}</span>`;
+      }
+      return `<div class="rate-row">
+        <span class="rate-label">${cat.emoji} ${cat.label}${tag}</span>
+        <span class="rate-stars">${stars}</span>
+      </div>`;
+    }).join("");
+  }
 }
 
 // Renderiza a área da tabela de estrelas: visualização da última pessoa OU formulário editável.
@@ -1904,7 +1930,7 @@ function renderRateForm() {
       <button type="button" class="add-other-btn" onclick="newRating('${_detailRestId}')">➕ Nova avaliação</button>
       <div class="rate-preview">
         <div class="detail-rate-head"><span>⭐ Última avaliação · 👤 ${escapeHtml(last.person || "Anônimo")}</span><span class="detail-rate-avg-wrap"><strong>${last.average || "–"}</strong>★</span></div>
-        ${previewStarsHTML(last)}
+        ${renderStarsHTML(last, false)}
       </div>`;
     return;
   }
@@ -1937,30 +1963,14 @@ function renderRateForm() {
   renderDetailStars();
 }
 
+// Renderiza o campo interativo de estrelas no modal de detalhe (modo editável).
 function renderDetailStars() {
   const body = document.getElementById("detail-rate-body");
-  if (!body || !_detailWork) return;
-  const work = _detailWork;
-  body.innerHTML = RATE_CATS.map(cat => {
-    const v = work.vals[cat.key] || 0;
-    const stars = [1, 2, 3, 4, 5].map(n =>
-      `<button type="button" class="star ${n <= v ? "on" : ""}" onclick="setStar('${cat.key}', ${n})" onmouseover="previewStars('${cat.key}', ${n})" onmouseout="previewStars('${cat.key}', ${v})" title="${n} estrela${n > 1 ? "s" : ""}">★</button>`
-    ).join("");
-    // No critério Bebida, mostra os tipos (cerveja/drinks/vinho) logo abaixo.
-    let extra = "";
-    if (cat.key === "bebida") {
-      extra = `<div class="drink-types">${DRINK_TYPES.map(d =>
-        `<button type="button" class="drink-pin ${work.bebidaTipo === d.key ? "active" : ""}" onclick="setDrinkType('${d.key}')">${d.emoji} ${d.label}</button>`
-      ).join("")}</div>`;
-    }
-    return `<div class="rate-row" data-cat="${cat.key}">
-      <span class="rate-label">${cat.emoji} ${cat.label}</span>
-      <span class="rate-stars">${stars}</span>
-    </div>${extra}`;
-  }).join("");
+  if (!body) return;
+  body.innerHTML = renderStarsHTML(null, true);
   const avgEl = document.getElementById("detail-rate-avg");
-  if (avgEl) {
-    const vals = RATE_CATS.map(c => work.vals[c.key] || 0).filter(v => v > 0);
+  if (avgEl && _detailWork) {
+    const vals = RATE_CATS.map(c => _detailWork.vals[c.key] || 0).filter(v => v > 0);
     avgEl.textContent = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "—";
   }
 }
