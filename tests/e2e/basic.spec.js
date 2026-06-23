@@ -195,7 +195,7 @@ test.describe('RolêPOA - Testes Básicos', () => {
     await page.waitForSelector('[id^="card-"]', { timeout: 5000 }).catch(() => {});
 
     // Clicar no filtro "Já Fui & Avaliados"
-    const filterBtn = page.locator('button:has-text("Já Fui")');
+    const filterBtn = page.locator('button.filter-btn[data-status="ja-fui"]');
     if (await filterBtn.count() > 0) {
       await filterBtn.click();
       await page.waitForTimeout(500);
