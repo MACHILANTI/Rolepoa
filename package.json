@@ -1,0 +1,17 @@
+{
+  "name": "role-poa",
+  "version": "1.0.0",
+  "description": "Portal de Restaurantes Ótimos da Vida em Porto Alegre",
+  "main": "app.js",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
