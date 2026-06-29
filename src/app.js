@@ -110,7 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
   checkUrlImports();
   syncOnStartup();
   purgeDemoSeeds();
-  maybeShowWelcome();
   setupModalScrollLock();
   setupModalClose();
 });
@@ -2670,61 +2669,6 @@ function burstConfetti() {
 }
 
 
-// ===== BOAS-VINDAS (primeira visita) =====
-const WELCOME_NAME = "VISITANTE";
-function maybeShowWelcome() {
-  // Só aparece na primeira vez que o app é aberto neste navegador.
-  if (localStorage.getItem("role_poa_welcomed")) return;
-  showWelcome();
-}
-function showWelcome() {
-  if (document.getElementById("welcome-overlay")) return;
-  const ov = document.createElement("div");
-  ov.id = "welcome-overlay";
-  ov.className = "welcome-overlay";
-  ov.innerHTML = `
-    <div class="welcome-card" onclick="dismissWelcome()">
-      <div class="welcome-stars" id="welcome-stars"></div>
-      <div class="welcome-gradient"></div>
-
-      <div class="welcome-content">
-        <div class="welcome-icon">🍷</div>
-        <h2 class="welcome-title">Bem-Vindos</h2>
-        <p class="welcome-sub">Descubra os melhores lugares de Porto Alegre</p>
-
-        <div class="welcome-features">
-          <span class="feature">🍽️ Restaurantes</span>
-          <span class="feature">🎉 Experiências</span>
-          <span class="feature">🗺️ Explorar</span>
-        </div>
-
-        <button class="welcome-cta" onclick="event.stopPropagation(); dismissWelcome()">Começar Agora →</button>
-      </div>
-
-      <div class="welcome-glow"></div>
-    </div>`;
-  document.body.appendChild(ov);
-  requestAnimationFrame(() => ov.classList.add("show"));
-
-  // Gerar stars animadas
-  const starsHost = ov.querySelector("#welcome-stars");
-  if (starsHost) {
-    for (let i = 0; i < 30; i++) {
-      const star = document.createElement("div");
-      star.className = "star-particle";
-      star.style.left = Math.random() * 100 + "%";
-      star.style.top = Math.random() * 100 + "%";
-      star.style.animationDelay = (Math.random() * 3) + "s";
-      starsHost.appendChild(star);
-    }
-  }
-
-  const fwHost = ov.querySelector("#welcome-fireworks");
-  const emHost = ov.querySelector("#welcome-emojis");
-  setTimeout(() => { burstConfetti(); launchFireworks(fwHost, 5); floatEmojis(emHost); }, 450);
-  // mantém os fogos pipocando enquanto a tela estiver aberta
-  ov._fwTimer = setInterval(() => launchFireworks(fwHost, 3), INTERVAL_FIREWORKS);
-}
 
 // Fogos de artifício: bursts de partículas dentro de um container (%).
 function launchFireworks(host, rounds = 4) {
@@ -2778,16 +2722,6 @@ function floatEmojis(host) {
   spawn();
 }
 
-function dismissWelcome() {
-  const ov = document.getElementById("welcome-overlay");
-  if (!ov) return;
-  localStorage.setItem("role_poa_welcomed", "1");
-  if (ov._fwTimer) { clearInterval(ov._fwTimer); ov._fwTimer = null; }
-  try { playFanfare(); } catch (e) {}
-  burstConfetti();
-  ov.classList.add("drive");
-  setTimeout(() => ov.remove(), 700);
-}
 
 // ===== MENU =====
 function openMenu() { document.getElementById("modal-menu").classList.add("active"); }
