@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Carregar Dados de Teste</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0400;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, rgba(20, 15, 40, 0.9), rgba(30, 25, 60, 0.85));
+            border: 2px solid rgba(245, 166, 35, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+        }
+        h1 {
+            font-size: 28px;
+            margin: 0 0 20px 0;
+            color: #ffd87a;
+        }
+        .button {
+            background: linear-gradient(110deg, #fff8d7, #ffd87a, #f5a623, #e05a47);
+            color: #1a0800;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 999px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 100, 50, 0.4);
+            margin: 10px 0;
+            width: 100%;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 100, 50, 0.6);
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(100, 200, 100, 0.1);
+            border-left: 3px solid #4caf50;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #a8d5ba;
+            display: none;
+        }
+        .error {
+            background: rgba(255, 100, 100, 0.1);
+            border-left-color: #ff6b6b;
+            color: #ff9999;
+        }
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍷 RolêPOA - Carregar Dados</h1>
+        <p>Clique no botão para inserir 10 restaurantes de teste no Supabase:</p>
+
+        <button class="button" onclick="loadTestData()">Carregar Dados de Teste</button>
+        <button class="button" onclick="goHome()" style="background: linear-gradient(110deg, #6b7280, #4b5563); margin-top: 20px;">Voltar para Home</button>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = "https://papakiwailmirguubanf.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhcGFraXdhaWxtaXJndXViYW5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NzEwNjksImV4cCI6MjA5NjQ0NzA2OX0.ffBCveRc8Snwj7TBvTEAv7K8sLEIjTNEZjlSuBwqh8M";
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const testData = [
+            {
+                name: "Agridoce Café",
+                bairro: "Bom Fim",
+                categoria: "Café",
+                website: "https://agridoce.com.br",
+                instagram: "@agridoce",
+                status: "para-conhecer",
+                nota: 4.5
+            },
+            {
+                name: "Severo Restaurante",
+                bairro: "Cidade Baixa",
+                categoria: "Contemporânea",
+                website: "https://severo.com.br",
+                instagram: "@severo_poa",
+                status: "para-conhecer",
+                nota: 4.8
+            },
+            {
+                name: "Barros - Brasilidade",
+                bairro: "Moinhos de Vento",
+                categoria: "Brasileira",
+                website: "https://barros.com.br",
+                instagram: "@barros_poa",
+                status: "ja-fui",
+                nota: 4.7
+            },
+            {
+                name: "Oga Oga",
+                bairro: "Menino Deus",
+                categoria: "Contemporânea",
+                website: "https://ogaoga.com.br",
+                instagram: "@ogaoga_poa",
+                status: "para-conhecer",
+                nota: 4.6
+            },
+            {
+                name: "Gosto da Gente",
+                bairro: "Auxiliadora",
+                categoria: "Brasileira",
+                website: "https://gustodagente.com.br",
+                instagram: "@gustodagente",
+                status: "ja-fui",
+                nota: 4.4
+            },
+            {
+                name: "Lá da Venda",
+                bairro: "Cidade Baixa",
+                categoria: "Brasileira",
+                website: "https://ladavenda.com.br",
+                instagram: "@ladavenda",
+                status: "para-conhecer",
+                nota: 4.5
+            },
+            {
+                name: "Café Preto",
+                bairro: "Bom Fim",
+                categoria: "Café",
+                website: "https://cafepreto.com.br",
+                instagram: "@cafepreto",
+                status: "ja-fui",
+                nota: 4.3
+            },
+            {
+                name: "Chef Amador",
+                bairro: "Moinhos de Vento",
+                categoria: "Italiana",
+                website: "https://chefamador.com.br",
+                instagram: "@chefamador",
+                status: "para-conhecer",
+                nota: 4.6
+            },
+            {
+                name: "Bira",
+                bairro: "Centro Histórico",
+                categoria: "Pub",
+                website: "https://bira.com.br",
+                instagram: "@bira_poa",
+                status: "ja-fui",
+                nota: 4.2
+            },
+            {
+                name: "Escadaria",
+                bairro: "Auxiliadora",
+                categoria: "Contemporânea",
+                website: "https://escadaria.com.br",
+                instagram: "@escadaria",
+                status: "para-conhecer",
+                nota: 4.7
+            }
+        ];
+
+        async function loadTestData() {
+            const statusEl = document.getElementById('status');
+            statusEl.classList.remove('error');
+            statusEl.textContent = '⏳ Carregando dados...';
+            statusEl.style.display = 'block';
+
+            try {
+                let count = 0;
+                for (const restaurant of testData) {
+                    const { error } = await supabase
+                        .from('restaurants')
+                        .insert([restaurant]);
+
+                    if (!error) {
+                        count++;
+                    }
+                }
+
+                statusEl.textContent = `✅ ${count} restaurantes inseridos com sucesso! Redirecionando...`;
+
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } catch (error) {
+                statusEl.classList.add('error');
+                statusEl.textContent = `❌ Erro: ${error.message}`;
+                console.error(error);
+            }
+        }
+
+        function goHome() {
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

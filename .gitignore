@@ -1,20 +1,24 @@
-# App mobile (projeto Expo separado, com repo próprio)
+# 📱 App mobile (projeto Expo separado, com repo próprio)
 mobile/
 
-# Backups e ferramentas locais
+# 🎨 Backups e ferramentas locais
 .ui-backup/
 .claude/
 .expo/
 
-# Dependências / sistema
+# 📦 Dependências e cache
 node_modules/
+.cache/
 .DS_Store
 Thumbs.db
+
+# 📝 Logs
 *.log
 
-# Servidor local de teste
-.serve.js
+# ⚙️ Configurações locais
+.config/netlify.toml
+.config/skills-lock.json
 
-# Skills e ferramentas do Claude Code
+# 🤖 Claude Code e ferramentas
 .agents/
-skills-lock.json
+.superpowers/
