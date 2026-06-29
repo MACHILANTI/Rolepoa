@@ -110,7 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
   checkUrlImports();
   syncOnStartup();
   purgeDemoSeeds();
-  maybeShowWelcome();
   setupModalScrollLock();
   setupModalClose();
 });
@@ -2671,92 +2670,6 @@ function burstConfetti() {
 
 
 // ===== BOAS-VINDAS (primeira visita) =====
-const WELCOME_NAME = "VISITANTE";
-function maybeShowWelcome() {
-  // Só aparece na primeira vez que o app é aberto neste navegador.
-  if (localStorage.getItem("role_poa_welcomed")) return;
-  showWelcome();
-}
-function showWelcome() {
-  if (document.getElementById("welcome-overlay")) return;
-  const ov = document.createElement("div");
-  ov.id = "welcome-overlay";
-  ov.className = "welcome-overlay";
-  ov.innerHTML = `
-    <div class="welcome-card" onclick="dismissWelcome()">
-      <svg class="welcome-bg-svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;z-index:0;border-radius:40px;overflow:hidden;">
-        <defs>
-          <linearGradient id="welcomeSkyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#1a0a3e;stop-opacity:1" />
-            <stop offset="20%" style="stop-color:#5a2d4e;stop-opacity:1" />
-            <stop offset="40%" style="stop-color:#d97706;stop-opacity:1" />
-            <stop offset="60%" style="stop-color:#f59e0b;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#92bffd;stop-opacity:1" />
-          </linearGradient>
-          <radialGradient id="welcomeSunGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" style="stop-color:#ffeb3b;stop-opacity:1" />
-            <stop offset="50%" style="stop-color:#ff9800;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#ff5722;stop-opacity:0.8" />
-          </radialGradient>
-        </defs>
-        <rect width="1600" height="1000" fill="url(#welcomeSkyGrad)" />
-        <circle cx="800" cy="300" r="100" fill="url(#welcomeSunGrad)" style="filter:drop-shadow(0 0 60px rgba(255,200,0,0.8));animation:sunBounce 4s ease-in-out infinite;" />
-        <ellipse cx="800" cy="750" rx="700" ry="120" fill="rgba(100,150,200,0.4)" />
-        <g style="filter:drop-shadow(0 0 20px rgba(255,150,0,0.6));animation:gasoBounce 3s ease-in-out infinite;">
-          <rect x="300" y="500" width="150" height="250" fill="#333" opacity="0.7" />
-          <circle cx="375" cy="550" r="80" fill="#444" opacity="0.7" />
-          <circle cx="375" cy="490" r="8" fill="#ffb700" opacity="0.9" />
-          <circle cx="375" cy="620" r="8" fill="#ff8800" opacity="0.8" />
-        </g>
-        <g style="filter:drop-shadow(0 0 15px rgba(255,200,0,0.5));animation:lacBounce 3.5s ease-in-out infinite;">
-          <polygon points="1200,600 1150,750 1250,750" fill="#8b7355" opacity="0.7" />
-          <circle cx="1200" cy="520" r="30" fill="#d4af37" opacity="0.85" />
-          <path d="M 1215 520 Q 1270 490 1310 500" stroke="#d4af37" stroke-width="3" fill="none" opacity="0.8" />
-          <circle cx="1310" cy="500" r="18" fill="none" stroke="#d4af37" stroke-width="2.5" opacity="0.8" />
-        </g>
-      </svg>
-
-      <div class="welcome-stars" id="welcome-stars"></div>
-      <div class="welcome-gradient"></div>
-
-      <div class="welcome-content">
-        <div class="welcome-icon">🍷</div>
-        <h2 class="welcome-title">Bem-Vindos</h2>
-        <p class="welcome-sub">Descubra os melhores lugares de Porto Alegre</p>
-
-        <div class="welcome-features">
-          <span class="feature">🍽️ Restaurantes</span>
-          <span class="feature">🎉 Experiências</span>
-          <span class="feature">🗺️ Explorar</span>
-        </div>
-
-        <button class="welcome-cta" onclick="event.stopPropagation(); dismissWelcome()">Começar Agora →</button>
-      </div>
-
-      <div class="welcome-glow"></div>
-    </div>`;
-  document.body.appendChild(ov);
-  requestAnimationFrame(() => ov.classList.add("show"));
-
-  // Gerar stars animadas
-  const starsHost = ov.querySelector("#welcome-stars");
-  if (starsHost) {
-    for (let i = 0; i < 30; i++) {
-      const star = document.createElement("div");
-      star.className = "star-particle";
-      star.style.left = Math.random() * 100 + "%";
-      star.style.top = Math.random() * 100 + "%";
-      star.style.animationDelay = (Math.random() * 3) + "s";
-      starsHost.appendChild(star);
-    }
-  }
-
-  const fwHost = ov.querySelector("#welcome-fireworks");
-  const emHost = ov.querySelector("#welcome-emojis");
-  setTimeout(() => { burstConfetti(); launchFireworks(fwHost, 5); floatEmojis(emHost); }, 450);
-  // mantém os fogos pipocando enquanto a tela estiver aberta
-  ov._fwTimer = setInterval(() => launchFireworks(fwHost, 3), INTERVAL_FIREWORKS);
-}
 
 // Fogos de artifício: bursts de partículas dentro de um container (%).
 function launchFireworks(host, rounds = 4) {
@@ -2810,16 +2723,6 @@ function floatEmojis(host) {
   spawn();
 }
 
-function dismissWelcome() {
-  const ov = document.getElementById("welcome-overlay");
-  if (!ov) return;
-  localStorage.setItem("role_poa_welcomed", "1");
-  if (ov._fwTimer) { clearInterval(ov._fwTimer); ov._fwTimer = null; }
-  try { playFanfare(); } catch (e) {}
-  burstConfetti();
-  ov.classList.add("drive");
-  setTimeout(() => ov.remove(), 700);
-}
 
 // ===== MENU =====
 function openMenu() { document.getElementById("modal-menu").classList.add("active"); }
