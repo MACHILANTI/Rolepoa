@@ -2669,7 +2669,6 @@ function burstConfetti() {
 }
 
 
-// ===== BOAS-VINDAS (primeira visita) =====
 
 // Fogos de artifício: bursts de partículas dentro de um container (%).
 function launchFireworks(host, rounds = 4) {
