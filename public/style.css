@@ -1419,6 +1419,7 @@ select.form-control {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 14px 16px;
+  overflow: visible;
 }
 .detail-rate-head {
   display: flex;
@@ -1449,7 +1450,7 @@ select.form-control {
 .final-rate-count { font-size: 14px; font-weight: 700; color: var(--text); margin-top: 3px; }
 
 /* Lista de avaliações (cada pessoa) */
-.rate-list { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 12px; }
+.rate-list { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 12px; height: auto; min-height: auto; overflow: visible; }
 .rate-empty { color: var(--text-muted); font-size: 13.5px; text-align: center; padding: 10px 0; }
 .rate-card {
   background: rgba(255,255,255,0.04);
@@ -1458,6 +1459,7 @@ select.form-control {
   padding: 11px 13px;
   cursor: pointer;
   transition: border-color 0.15s;
+  flex: 0 0 auto;
 }
 .rate-card:hover { border-color: rgba(245,166,35,0.4); }
 .rate-card-top { display: flex; justify-content: space-between; align-items: center; }
@@ -2157,6 +2159,11 @@ select.form-control {
     break-inside: avoid;
     -webkit-column-break-inside: avoid;
     margin-bottom: 18px;
+  }
+  /* Excepção: as avaliações devem poder quebrar entre colunas para não truncar conteúdo */
+  .detail-ratings-list, #detail-ratings-list {
+    break-inside: auto;
+    -webkit-column-break-inside: auto;
   }
 }
 
