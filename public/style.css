@@ -1419,7 +1419,9 @@ select.form-control {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 14px 16px;
-  overflow: visible;
+  overflow: visible !important;
+  display: block !important;
+  height: auto !important;
 }
 .detail-rate-head {
   display: flex;
@@ -1450,7 +1452,16 @@ select.form-control {
 .final-rate-count { font-size: 14px; font-weight: 700; color: var(--text); margin-top: 3px; }
 
 /* Lista de avaliações (cada pessoa) */
-.rate-list { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 12px; height: auto; min-height: auto; overflow: visible; }
+.rate-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px;
+  margin: 6px 0 12px;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
 .rate-empty { color: var(--text-muted); font-size: 13.5px; text-align: center; padding: 10px 0; }
 .rate-card {
   background: rgba(255,255,255,0.04);
@@ -1459,7 +1470,10 @@ select.form-control {
   padding: 11px 13px;
   cursor: pointer;
   transition: border-color 0.15s;
-  flex: 0 0 auto;
+  flex: 0 0 auto !important;
+  display: block !important;
+  visibility: visible !important;
+  height: auto !important;
 }
 .rate-card:hover { border-color: rgba(245,166,35,0.4); }
 .rate-card-top { display: flex; justify-content: space-between; align-items: center; }
@@ -1720,7 +1734,16 @@ select.form-control {
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ===== DETALHE: espaçamento uniforme das seções ===== */
-.detail-sections > * { margin-top: 0; margin-bottom: 16px; }
+.detail-sections {
+  display: block !important;
+  column-count: auto !important;
+}
+.detail-sections > * {
+  margin-top: 0;
+  margin-bottom: 16px;
+  break-inside: auto !important;
+  -webkit-column-break-inside: auto !important;
+}
 .detail-sections > *:last-child { margin-bottom: 0; }
 
 /* ===== MICROINTERAÇÕES ===== */
