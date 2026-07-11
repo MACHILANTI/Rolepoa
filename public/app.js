@@ -1,6 +1,5 @@
 // ===== DADOS INICIAIS =====
 // Sem lugares-demo: o app começa vazio e adota os dados reais da nuvem.
-console.log("🔄 App Version: 2024.07.11.cafe");
 const DEFAULT_RESTAURANTS = [];
 // IDs dos antigos lugares-demo, que devem ser removidos de vez (voltavam pela
 // sincronização). Ver purgeDemoSeeds().
@@ -111,7 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
   checkUrlImports();
   syncOnStartup();
   purgeDemoSeeds();
-  maybeShowWelcome();
   setupModalScrollLock();
   setupModalClose();
 });
@@ -2727,38 +2725,6 @@ function floatEmojis(host) {
 
 
 // ===== MENU =====
-// ===== WELCOME CARD =====
-function maybeShowWelcome() {
-  if (localStorage.getItem("role_poa_welcomed")) return;
-  showWelcome();
-}
-
-function showWelcome() {
-  if (document.getElementById("welcome-overlay")) return;
-  const ov = document.createElement("div");
-  ov.id = "welcome-overlay";
-  ov.className = "welcome-overlay";
-  ov.innerHTML = `
-    <div class="welcome-card">
-      <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&auto=format&fit=crop&q=80" alt="Porto Alegre" class="welcome-bg-img">
-      <div class="welcome-content">
-        <h1 class="welcome-title">Bem-vindo a<br>Porto Alegre</h1>
-        <p class="welcome-subtitle">Vamos dar um rolê?</p>
-        <button class="welcome-btn" onclick="dismissWelcome()">BORA</button>
-      </div>
-    </div>`;
-  document.body.appendChild(ov);
-  requestAnimationFrame(() => ov.classList.add("show"));
-}
-
-function dismissWelcome() {
-  const ov = document.getElementById("welcome-overlay");
-  if (!ov) return;
-  localStorage.setItem("role_poa_welcomed", "1");
-  ov.classList.add("hide");
-  setTimeout(() => ov.remove(), 300);
-}
-
 function openMenu() { document.getElementById("modal-menu").classList.add("active"); }
 function closeMenu() { document.getElementById("modal-menu").classList.remove("active"); }
 
