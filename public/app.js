@@ -1,5 +1,6 @@
 // ===== DADOS INICIAIS =====
 // Sem lugares-demo: o app começa vazio e adota os dados reais da nuvem.
+console.log("🔄 App Version: 2024.07.11.cafe");
 const DEFAULT_RESTAURANTS = [];
 // IDs dos antigos lugares-demo, que devem ser removidos de vez (voltavam pela
 // sincronização). Ver purgeDemoSeeds().
