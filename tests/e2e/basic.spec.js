@@ -1,21 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-// Setup: fecha welcome overlay se existir
-async function closeWelcomeOverlay(page) {
-  const overlay = page.locator('#welcome-overlay');
-  if (await overlay.count() > 0) {
-    const closeBtn = overlay.locator('button').first();
-    if (await closeBtn.count() > 0) {
-      await closeBtn.click();
-      await page.waitForTimeout(300);
-    }
-  }
-}
-
 test.describe('RolêPOA - Testes Básicos', () => {
   test('Deve carregar a página inicial', async ({ page }) => {
     await page.goto('/');
-    await closeWelcomeOverlay(page);
 
     // Aguarda cards carregarem
     await page.waitForSelector('[id^="card-"]', { timeout: 5000 }).catch(() => {});
