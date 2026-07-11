@@ -413,11 +413,13 @@
   <!-- ===== TOAST CONTAINER ===== -->
   <div id="toast-container"></div>
 
-  <script src="app.js?v=1.2.5"></script>
+  <script src="app.js?v=2024.07.11.cafe"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
       });
     }
   </script>
