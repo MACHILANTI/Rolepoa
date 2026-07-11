@@ -1,3 +1,7 @@
+[build]
+  publish = "public"
+  command = "echo 'No build needed'"
+
 [[headers]]
   for = "/app.js"
   [headers.values]
