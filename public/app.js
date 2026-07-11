@@ -1766,6 +1766,7 @@ const RATE_CATS = [
 ];
 // Tipos de bebida (escolhido ao avaliar o critério Bebida).
 const DRINK_TYPES = [
+  { key: "cafe", label: "Café", emoji: "☕" },
   { key: "cerveja", label: "Cerveja", emoji: "🍺" },
   { key: "drinks", label: "Drinks", emoji: "🍸" },
   { key: "vinho", label: "Vinho", emoji: "🍷" }
