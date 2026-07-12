@@ -21,7 +21,7 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Range")
 
     def do_GET(self):
-        path = unquote(self.path)
+        path = unquote(self.path.split('?')[0])  # Remove query string
 
         # Proxy para URLs diretas do Supabase
         if path.startswith("/proxy?url="):
