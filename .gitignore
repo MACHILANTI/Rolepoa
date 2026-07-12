@@ -16,9 +16,14 @@ Thumbs.db
 *.log
 
 # ⚙️ Configurações locais
-.config/netlify.toml
-.config/skills-lock.json
+.config/
+.netlify/
 
 # 🤖 Claude Code e ferramentas
 .agents/
 .superpowers/
+
+# 🧪 Arquivos de teste/desenvolvimento locais
+public/seed.html
+public/reset.html
+public/porto-alegre-bg.html

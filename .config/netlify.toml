@@ -1,3 +1,0 @@
-# Site estático (PWA) — publica o diretório public/, sem etapa de build.
-[build]
-  publish = "public"
