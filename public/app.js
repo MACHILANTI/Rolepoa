@@ -7,11 +7,13 @@ function proxyUrl(url) {
   if (!url || typeof url !== "string") return url;
   const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
   if (!isLocalhost) return url;
-  if (url.includes("supabase.co")) {
-    const path = url.replace("https://papakiwailmirguubanf.supabase.co/", "");
-    return `/supabase/${path}`;
+  // Usa weserv.nl como proxy CORS para imagens do Google e Supabase
+  try {
+    const encoded = encodeURIComponent(url);
+    return `https://images.weserv.nl/?url=${encoded}&output=webp&q=80`;
+  } catch (e) {
+    return url;
   }
-  return url;
 }
 // IDs dos antigos lugares-demo, que devem ser removidos de vez (voltavam pela
 // sincronização). Ver purgeDemoSeeds().
