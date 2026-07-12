@@ -3,15 +3,15 @@
 const DEFAULT_RESTAURANTS = [];
 
 // Proxy de imagens para localhost
-if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-  const originalFetch = window.fetch;
-  window.fetch = function(resource, init) {
-    if (typeof resource === "string" && resource.includes("papakiwailmirguubanf.supabase.co")) {
-      const urlPart = resource.replace("https://papakiwailmirguubanf.supabase.co/", "");
-      resource = `/supabase/${urlPart}`;
-    }
-    return originalFetch.call(this, resource, init);
-  };
+function proxyUrl(url) {
+  if (!url || typeof url !== "string") return url;
+  const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  if (!isLocalhost) return url;
+  if (url.includes("supabase.co")) {
+    const path = url.replace("https://papakiwailmirguubanf.supabase.co/", "");
+    return `/supabase/${path}`;
+  }
+  return url;
 }
 // IDs dos antigos lugares-demo, que devem ser removidos de vez (voltavam pela
 // sincronização). Ver purgeDemoSeeds().
@@ -260,8 +260,9 @@ function instagramAvatarUrl(handle) {
 // se a foto do Google falhar ao carregar fora do localhost).
 function coverBg(r) {
   const cat = CATEGORY_IMAGES[r.categoria] || CATEGORY_IMAGES["Outro"];
-  return r.photo
-    ? `url('${escapeAttr(r.photo)}'), url('${escapeAttr(cat)}')`
+  const photoUrl = r.photo ? proxyUrl(r.photo) : null;
+  return photoUrl
+    ? `url('${escapeAttr(photoUrl)}'), url('${escapeAttr(cat)}')`
     : `url('${escapeAttr(cat)}')`;
 }
 
@@ -387,7 +388,8 @@ async function uploadToStorage(dataUrl, prefix) {
     const { error } = await client.storage.from("photos").upload(path, blob, { contentType: blob.type, upsert: false });
     if (error) { return dataUrl; }
     const { data } = client.storage.from("photos").getPublicUrl(path);
-    return data.publicUrl || dataUrl;
+    let url = data.publicUrl || dataUrl;
+    return proxyUrl(url);
   } catch (e) {
     return dataUrl;
   }
