@@ -141,7 +141,7 @@ function purgeDemoSeeds() {
 // Evita o flicker no celular (barra de endereço mexendo + fundo rolando).
 function setupModalScrollLock() {
   const sync = () => {
-    const open = document.querySelector(".modal.active") || document.getElementById("welcome-overlay");
+    const open = document.querySelector(".modal.active");
     document.body.classList.toggle("modal-open", !!open);
   };
   _modalObserver = new MutationObserver(sync);

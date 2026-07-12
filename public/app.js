@@ -1,6 +1,5 @@
 // ===== DADOS INICIAIS =====
 // Sem lugares-demo: o app começa vazio e adota os dados reais da nuvem.
-console.log("🔄 App Version: 2024.07.11.cafe");
 const DEFAULT_RESTAURANTS = [];
 // IDs dos antigos lugares-demo, que devem ser removidos de vez (voltavam pela
 // sincronização). Ver purgeDemoSeeds().
@@ -142,7 +141,7 @@ function purgeDemoSeeds() {
 // Evita o flicker no celular (barra de endereço mexendo + fundo rolando).
 function setupModalScrollLock() {
   const sync = () => {
-    const open = document.querySelector(".modal.active") || document.getElementById("welcome-overlay");
+    const open = document.querySelector(".modal.active");
     document.body.classList.toggle("modal-open", !!open);
   };
   _modalObserver = new MutationObserver(sync);
@@ -2726,7 +2725,6 @@ function floatEmojis(host) {
 
 
 // ===== MENU =====
-
 function openMenu() { document.getElementById("modal-menu").classList.add("active"); }
 function closeMenu() { document.getElementById("modal-menu").classList.remove("active"); }
 
