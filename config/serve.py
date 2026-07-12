@@ -119,10 +119,11 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
             print(f"[{self.log_date_time_string()}] {format % args}")
 
 if __name__ == "__main__":
-    with socketserver.TCPServer(("0.0.0.0", PORT), ProxyHandler) as httpd:
-        print(f"\n🚀 RolêPOA com proxy de imagens")
-        print(f"📍 Acesse: http://localhost:{PORT}")
-        print(f"📸 Proxy Supabase: /supabase/* e /proxy?url=BASE64\n")
+    import os
+    port = int(os.environ.get("PORT", PORT))
+    with socketserver.TCPServer(("0.0.0.0", port), ProxyHandler) as httpd:
+        print(f"\nRolepoa server running on port {port}")
+        print(f"Access: http://localhost:{port}\n")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

@@ -2,18 +2,9 @@
 // Sem lugares-demo: o app começa vazio e adota os dados reais da nuvem.
 const DEFAULT_RESTAURANTS = [];
 
-// Proxy de imagens para localhost
+// Sem proxy necessário - localhost:5500 já está autorizado no Google API
 function proxyUrl(url) {
-  if (!url || typeof url !== "string") return url;
-  const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-  if (!isLocalhost) return url;
-  // Usa weserv.nl como proxy CORS para imagens do Google e Supabase
-  try {
-    const encoded = encodeURIComponent(url);
-    return `https://images.weserv.nl/?url=${encoded}&output=webp&q=80`;
-  } catch (e) {
-    return url;
-  }
+  return url;
 }
 // IDs dos antigos lugares-demo, que devem ser removidos de vez (voltavam pela
 // sincronização). Ver purgeDemoSeeds().
