@@ -1,6 +1,18 @@
 // ===== DADOS INICIAIS =====
 // Sem lugares-demo: o app começa vazio e adota os dados reais da nuvem.
 const DEFAULT_RESTAURANTS = [];
+
+// Proxy de imagens para localhost
+if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  const originalFetch = window.fetch;
+  window.fetch = function(resource, init) {
+    if (typeof resource === "string" && resource.includes("papakiwailmirguubanf.supabase.co")) {
+      const urlPart = resource.replace("https://papakiwailmirguubanf.supabase.co/", "");
+      resource = `/supabase/${urlPart}`;
+    }
+    return originalFetch.call(this, resource, init);
+  };
+}
 // IDs dos antigos lugares-demo, que devem ser removidos de vez (voltavam pela
 // sincronização). Ver purgeDemoSeeds().
 const DEMO_IDS = ["demo-1", "demo-2", "demo-3"];
