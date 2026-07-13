@@ -119,6 +119,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setupModalClose();
 });
 
+window.addEventListener("beforeunload", cleanupLocationTracking);
+
 // ===== SEÇÕES DO APP =====
 // STATE: variáveis globais (linhas ~63-70)
 // API (Supabase): sincronização e armazenamento na nuvem (linhas ~258-355)
@@ -579,6 +581,14 @@ let _map = null;
 let _markers = {};          // id -> marker
 let _markerLayer = null;
 
+// Rastreamento de localização em tempo real
+let _userLocationMarker = null;
+let _otherUsersMarkers = {};  // sessionId -> marker
+let _currentSessionId = Math.random().toString(36).substring(7);
+let _locationSubscription = null;
+let _geoLocationWatcher = null;
+let _lastLocationUpdate = 0;
+
 function setView(view) {
   currentView = view;
   document.getElementById("list-view").style.display = view === "list" ? "" : "none";
@@ -605,7 +615,100 @@ function initMap() {
     attribution: '© OpenStreetMap'
   }).addTo(_map);
   _markerLayer = L.layerGroup().addTo(_map);
+  initRealTimeLocation();
   return true;
+}
+
+// Rastreamento de localização em tempo real
+function initRealTimeLocation() {
+  if (!_map) return;
+  startGeoTracking();
+  subscribeToOtherUsers();
+}
+
+function startGeoTracking() {
+  if (!navigator.geolocation) {
+    console.warn("Geolocation não disponível");
+    return;
+  }
+
+  _geoLocationWatcher = navigator.geolocation.watchPosition(
+    (pos) => updateUserLocation(pos),
+    (err) => console.warn("Erro de geolocation:", err),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+function updateUserLocation(pos) {
+  const now = Date.now();
+  if (now - _lastLocationUpdate < 3000) return; // Atualizar max a cada 3s
+  _lastLocationUpdate = now;
+
+  const lat = pos.coords.latitude;
+  const lng = pos.coords.longitude;
+  const client = sb();
+
+  if (!client) return;
+
+  client.from("active_users").upsert(
+    { session_id: _currentSessionId, lat, lng, updated_at: new Date() },
+    { onConflict: "session_id" }
+  ).then(() => {
+    if (_userLocationMarker) _map.removeLayer(_userLocationMarker);
+    _userLocationMarker = L.marker([lat, lng], {
+      icon: L.divIcon({
+        html: `<div style="background:#3498db; color:white; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold; white-space:nowrap;">📍 Eu</div>`,
+        iconSize: [60, 30],
+        className: 'user-location-marker'
+      })
+    }).addTo(_map);
+  });
+}
+
+function subscribeToOtherUsers() {
+  const client = sb();
+  if (!client) return;
+
+  _locationSubscription = client
+    .from("active_users")
+    .on("*", (payload) => {
+      const { session_id, lat, lng, old_record } = payload;
+
+      if (session_id === _currentSessionId) return; // Ignorar própria localização
+
+      if (payload.eventType === "DELETE" || !lat || !lng) {
+        if (_otherUsersMarkers[session_id]) {
+          _map.removeLayer(_otherUsersMarkers[session_id]);
+          delete _otherUsersMarkers[session_id];
+        }
+        return;
+      }
+
+      if (_otherUsersMarkers[session_id]) {
+        _map.removeLayer(_otherUsersMarkers[session_id]);
+      }
+
+      _otherUsersMarkers[session_id] = L.marker([lat, lng], {
+        icon: L.divIcon({
+          html: `<div style="background:#e74c3c; color:white; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold; white-space:nowrap;">👤 Outra pessoa</div>`,
+          iconSize: [110, 30],
+          className: 'other-user-marker'
+        })
+      }).addTo(_map);
+    })
+    .subscribe();
+}
+
+function cleanupLocationTracking() {
+  if (_geoLocationWatcher) navigator.geolocation.clearWatch(_geoLocationWatcher);
+  if (_locationSubscription) _locationSubscription.unsubscribe();
+  if (_userLocationMarker) _map.removeLayer(_userLocationMarker);
+  Object.values(_otherUsersMarkers).forEach(m => _map.removeLayer(m));
+
+  const client = sb();
+  if (client) {
+    client.from("active_users").delete().eq("session_id", _currentSessionId);
+  }
 }
 
 function makeMarkerIcon(r, highlight) {
