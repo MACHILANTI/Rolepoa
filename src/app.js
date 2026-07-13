@@ -119,6 +119,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setupModalClose();
 });
 
+window.addEventListener("beforeunload", stopLocationTracking);
+
 // ===== SEÇÕES DO APP =====
 // STATE: variáveis globais (linhas ~63-70)
 // API (Supabase): sincronização e armazenamento na nuvem (linhas ~258-355)
@@ -578,6 +580,12 @@ function cardClick(event, id) {
 let _map = null;
 let _markers = {};          // id -> marker
 let _markerLayer = null;
+let _userLocationMarker = null;
+let _otherUsersMarkers = {};
+let _currentSessionId = Math.random().toString(36).substring(7);
+let _locationSubscription = null;
+let _geoLocationWatcher = null;
+let _lastLocationUpdate = 0;
 
 function setView(view) {
   currentView = view;
@@ -587,7 +595,7 @@ function setView(view) {
     b.classList.toggle("active", b.dataset.view === view));
   if (view === "map") {
     if (!initMap()) return;
-    // O mapa estava escondido; precisa recalcular o tamanho.
+    startLocationTracking();
     setTimeout(() => { _map.invalidateSize(); render(); }, DELAY_MAP_RENDER);
   }
 }
@@ -618,6 +626,99 @@ function makeMarkerIcon(r, highlight) {
     iconAnchor: [18, 18],
     popupAnchor: [0, -20]
   });
+}
+
+function createLocationMarker(label, isUser) {
+  const color = isUser ? "3498db" : "e74c3c";
+  const html = `
+    <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <style>
+          .pin-label { font-size: 11px; font-weight: bold; fill: white; text-anchor: middle; }
+        </style>
+      </defs>
+      <path d="M20 0 C10 0 3 7 3 17 C3 28 20 50 20 50 C20 50 37 28 37 17 C37 7 30 0 20 0 Z" fill="#${color}" stroke="white" stroke-width="2"/>
+      <text class="pin-label" x="20" y="18">${label.substring(0, 1)}</text>
+    </svg>
+  `;
+  return L.divIcon({
+    html,
+    iconSize: [40, 50],
+    iconAnchor: [20, 50],
+    className: 'location-marker'
+  });
+}
+
+function startLocationTracking() {
+  if (!_map || !navigator.geolocation) return;
+
+  _geoLocationWatcher = navigator.geolocation.watchPosition(
+    (pos) => updateUserLocation(pos),
+    (err) => console.warn("Geolocation error:", err),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+
+  subscribeToOtherUsers();
+}
+
+function updateUserLocation(pos) {
+  const now = Date.now();
+  if (now - _lastLocationUpdate < 3000) return;
+  _lastLocationUpdate = now;
+
+  const lat = pos.coords.latitude;
+  const lng = pos.coords.longitude;
+  const client = sb();
+  if (!client) return;
+
+  client.from("active_users").upsert(
+    { session_id: _currentSessionId, lat, lng, updated_at: new Date() },
+    { onConflict: "session_id" }
+  ).catch(e => console.warn("Location update error:", e));
+
+  if (_userLocationMarker) _map.removeLayer(_userLocationMarker);
+  _userLocationMarker = L.marker([lat, lng], { icon: createLocationMarker("Eu", true) }).addTo(_map);
+}
+
+function subscribeToOtherUsers() {
+  const client = sb();
+  if (!client) return;
+
+  _locationSubscription = client
+    .from("active_users")
+    .on("*", (payload) => {
+      const { session_id, lat, lng } = payload;
+      if (session_id === _currentSessionId) return;
+
+      if (payload.eventType === "DELETE" || !lat || !lng) {
+        if (_otherUsersMarkers[session_id]) {
+          _map.removeLayer(_otherUsersMarkers[session_id]);
+          delete _otherUsersMarkers[session_id];
+        }
+        return;
+      }
+
+      if (_otherUsersMarkers[session_id]) {
+        _map.removeLayer(_otherUsersMarkers[session_id]);
+      }
+
+      _otherUsersMarkers[session_id] = L.marker([lat, lng], {
+        icon: createLocationMarker("OP", false)
+      }).addTo(_map);
+    })
+    .subscribe();
+}
+
+function stopLocationTracking() {
+  if (_geoLocationWatcher) navigator.geolocation.clearWatch(_geoLocationWatcher);
+  if (_locationSubscription) _locationSubscription.unsubscribe();
+  if (_userLocationMarker) _map.removeLayer(_userLocationMarker);
+  Object.values(_otherUsersMarkers).forEach(m => _map.removeLayer(m));
+
+  const client = sb();
+  if (client) {
+    client.from("active_users").delete().eq("session_id", _currentSessionId).catch(() => {});
+  }
 }
 
 function renderMapMarkers(list) {
