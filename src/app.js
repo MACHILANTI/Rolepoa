@@ -579,6 +579,7 @@ let _map = null;
 let _markers = {};          // id -> marker
 let _markerLayer = null;
 let _locationLayer = null;  // Layer separado para pins de localização
+let _testMarker = null;     // Para teste simples
 
 function setView(view) {
   currentView = view;
@@ -588,8 +589,7 @@ function setView(view) {
     b.classList.toggle("active", b.dataset.view === view));
   if (view === "map") {
     if (!initMap()) return;
-    // O mapa estava escondido; precisa recalcular o tamanho.
-    setTimeout(() => { _map.invalidateSize(); render(); }, DELAY_MAP_RENDER);
+    setTimeout(() => { _map.invalidateSize(); render(); testLocationPin(); }, DELAY_MAP_RENDER);
   }
 }
 
@@ -638,6 +638,28 @@ function addLocationPin(lat, lng, label, color) {
 
 function clearLocationPins() {
   if (_locationLayer) _locationLayer.clearLayers();
+}
+
+function testLocationPin() {
+  console.log("Teste: adicionando pin de localização");
+  if (!_locationLayer) {
+    console.warn("_locationLayer não existe!");
+    return;
+  }
+
+  const lat = -30.0346;
+  const lng = -51.2177;
+  const html = `<svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 0 C10 0 3 7 3 17 C3 28 20 50 20 50 C20 50 37 28 37 17 C37 7 30 0 20 0 Z" fill="#3498db" stroke="white" stroke-width="2"/>
+    <text x="20" y="18" font-size="11" font-weight="bold" fill="white" text-anchor="middle">E</text>
+  </svg>`;
+
+  if (_testMarker) _locationLayer.removeLayer(_testMarker);
+  _testMarker = L.marker([lat, lng], {
+    icon: L.divIcon({ html, iconSize: [40, 50], iconAnchor: [20, 50] })
+  }).addTo(_locationLayer);
+
+  console.log("Pin adicionado com sucesso!");
 }
 
 function renderMapMarkers(list) {
