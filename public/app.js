@@ -119,8 +119,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupModalClose();
 });
 
-window.addEventListener("beforeunload", stopLocationTracking);
-
 // ===== SEÇÕES DO APP =====
 // STATE: variáveis globais (linhas ~63-70)
 // API (Supabase): sincronização e armazenamento na nuvem (linhas ~258-355)
@@ -581,12 +579,7 @@ let _map = null;
 let _markers = {};          // id -> marker
 let _markerLayer = null;
 let _locationLayer = null;  // Layer separado para pins de localização
-let _userMarker = null;
-let _otherMarkers = {};
-let _sessionId = Math.random().toString(36).substring(7);
-let _geoWatcher = null;
-let _locSubscription = null;
-let _lastLocUpdate = 0;
+let _testMarker = null;     // Para teste simples
 
 function setView(view) {
   currentView = view;
@@ -596,8 +589,7 @@ function setView(view) {
     b.classList.toggle("active", b.dataset.view === view));
   if (view === "map") {
     if (!initMap()) return;
-    startLocationTracking();
-    setTimeout(() => { _map.invalidateSize(); render(); }, DELAY_MAP_RENDER);
+    setTimeout(() => { _map.invalidateSize(); render(); testLocationPin(); }, DELAY_MAP_RENDER);
   }
 }
 
@@ -648,83 +640,31 @@ function clearLocationPins() {
   if (_locationLayer) _locationLayer.clearLayers();
 }
 
-function makeLocationIcon(label, color) {
-  return L.divIcon({
-    html: `<svg width="36" height="48" viewBox="0 0 36 48" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
-      <path d="M 18 2 C 10.3 2 4 8.3 4 16 C 4 28 18 46 18 46 C 18 46 32 28 32 16 C 32 8.3 25.7 2 18 2 Z" fill="${color}" stroke="white" stroke-width="2.5"/>
-      <circle cx="18" cy="16" r="6" fill="white" opacity="0.9"/>
-    </svg>`,
-    iconSize: [36, 48],
-    iconAnchor: [18, 48],
-    className: 'location-pin'
-  });
-}
-
-function startLocationTracking() {
-  if (!navigator.geolocation) return;
-  _geoWatcher = navigator.geolocation.watchPosition(
-    (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
-    (err) => console.warn("GPS erro:", err),
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  );
-  subscribeToLocations();
-}
-
-function updateLocation(lat, lng) {
-  const now = Date.now();
-  if (now - _lastLocUpdate < 3000) return;
-  _lastLocUpdate = now;
-
-  const client = sb();
-  if (!client) return;
-
-  client.from("active_users").upsert(
-    { session_id: _sessionId, lat, lng, updated_at: new Date() },
-    { onConflict: "session_id" }
-  ).catch(e => console.warn("Erro ao atualizar localização:", e));
-
-  if (_userMarker) _locationLayer.removeLayer(_userMarker);
-  _userMarker = L.marker([lat, lng], { icon: makeLocationIcon("Eu", "#3498db") }).addTo(_locationLayer);
-}
-
-function subscribeToLocations() {
-  const client = sb();
-  if (!client) return;
-
-  _locSubscription = client
-    .from("active_users")
-    .on("*", (payload) => {
-      const { session_id, lat, lng } = payload;
-      if (session_id === _sessionId) return;
-
-      if (payload.eventType === "DELETE" || !lat || !lng) {
-        if (_otherMarkers[session_id]) {
-          _locationLayer.removeLayer(_otherMarkers[session_id]);
-          delete _otherMarkers[session_id];
-        }
-        return;
-      }
-
-      if (_otherMarkers[session_id]) {
-        _locationLayer.removeLayer(_otherMarkers[session_id]);
-      }
-
-      _otherMarkers[session_id] = L.marker([lat, lng], {
-        icon: makeLocationIcon("OP", "#e74c3c")
-      }).addTo(_locationLayer);
-    })
-    .subscribe();
-}
-
-function stopLocationTracking() {
-  if (_geoWatcher) navigator.geolocation.clearWatch(_geoWatcher);
-  if (_locSubscription) _locSubscription.unsubscribe();
-  clearLocationPins();
-
-  const client = sb();
-  if (client) {
-    client.from("active_users").delete().eq("session_id", _sessionId).catch(() => {});
+function testLocationPin() {
+  console.log("Teste: adicionando pin de localização");
+  if (!_locationLayer) {
+    console.warn("_locationLayer não existe!");
+    return;
   }
+
+  const lat = -30.0346;
+  const lng = -51.2177;
+  const html = `<svg width="36" height="48" viewBox="0 0 36 48" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+    <defs>
+      <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/>
+      </filter>
+    </defs>
+    <path d="M 18 2 C 10.3 2 4 8.3 4 16 C 4 28 18 46 18 46 C 18 46 32 28 32 16 C 32 8.3 25.7 2 18 2 Z" fill="#3498db" stroke="white" stroke-width="2.5"/>
+    <circle cx="18" cy="16" r="6" fill="white" opacity="0.9"/>
+  </svg>`;
+
+  if (_testMarker) _locationLayer.removeLayer(_testMarker);
+  _testMarker = L.marker([lat, lng], {
+    icon: L.divIcon({ html, iconSize: [36, 48], iconAnchor: [18, 48], className: 'location-pin' })
+  }).addTo(_locationLayer);
+
+  console.log("Pin adicionado com sucesso!");
 }
 
 function renderMapMarkers(list) {
