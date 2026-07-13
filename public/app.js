@@ -694,10 +694,11 @@ function onLocationUpdate(pos) {
 
   const client = sb();
   if (client) {
-    client.from("active_users").upsert(
-      { session_id: _sessionId, lat, lng, updated_at: new Date() },
-      { onConflict: "session_id" }
-    ).catch(e => console.warn("Erro ao salvar localização:", e));
+    client
+      .from("active_users")
+      .upsert({ session_id: _sessionId, lat, lng, updated_at: new Date() })
+      .then(() => console.log("📍 Posição salva no Supabase"))
+      .catch(e => console.warn("❌ Erro ao salvar localização:", e.message));
   }
 }
 
