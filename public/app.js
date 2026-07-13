@@ -578,6 +578,7 @@ function cardClick(event, id) {
 let _map = null;
 let _markers = {};          // id -> marker
 let _markerLayer = null;
+let _locationLayer = null;  // Layer separado para pins de localização
 
 function setView(view) {
   currentView = view;
@@ -605,6 +606,7 @@ function initMap() {
     attribution: '© OpenStreetMap'
   }).addTo(_map);
   _markerLayer = L.layerGroup().addTo(_map);
+  _locationLayer = L.layerGroup().addTo(_map);
   return true;
 }
 
@@ -618,6 +620,24 @@ function makeMarkerIcon(r, highlight) {
     iconAnchor: [18, 18],
     popupAnchor: [0, -20]
   });
+}
+
+// Pins de localização (em layer separado, não interfere com restaurantes)
+function addLocationPin(lat, lng, label, color) {
+  const html = `<svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 0 C10 0 3 7 3 17 C3 28 20 50 20 50 C20 50 37 28 37 17 C37 7 30 0 20 0 Z" fill="#${color}" stroke="white" stroke-width="2"/>
+    <text x="20" y="18" font-size="11" font-weight="bold" fill="white" text-anchor="middle">${label.substring(0,1)}</text>
+  </svg>`;
+
+  const marker = L.marker([lat, lng], {
+    icon: L.divIcon({ html, iconSize: [40, 50], iconAnchor: [20, 50], className: 'location-marker' })
+  }).addTo(_locationLayer);
+
+  return marker;
+}
+
+function clearLocationPins() {
+  if (_locationLayer) _locationLayer.clearLayers();
 }
 
 function renderMapMarkers(list) {
