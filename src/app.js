@@ -649,14 +649,13 @@ function testLocationPin() {
 
   const lat = -30.0346;
   const lng = -51.2177;
-  const html = `<svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
-    <path d="M20 0 C10 0 3 7 3 17 C3 28 20 50 20 50 C20 50 37 28 37 17 C37 7 30 0 20 0 Z" fill="#3498db" stroke="white" stroke-width="2"/>
-    <text x="20" y="18" font-size="11" font-weight="bold" fill="white" text-anchor="middle">E</text>
-  </svg>`;
+  const html = `<div style="width: 32px; height: 40px; background: #3498db; border: 3px solid white; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+    <span style="transform: rotate(45deg); color: white; font-weight: bold; font-size: 14px;">E</span>
+  </div>`;
 
   if (_testMarker) _locationLayer.removeLayer(_testMarker);
   _testMarker = L.marker([lat, lng], {
-    icon: L.divIcon({ html, iconSize: [40, 50], iconAnchor: [20, 50] })
+    icon: L.divIcon({ html, iconSize: [32, 40], iconAnchor: [16, 40], className: 'location-pin' })
   }).addTo(_locationLayer);
 
   console.log("Pin adicionado com sucesso!");
