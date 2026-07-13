@@ -649,13 +649,19 @@ function testLocationPin() {
 
   const lat = -30.0346;
   const lng = -51.2177;
-  const html = `<div style="width: 32px; height: 40px; background: #3498db; border: 3px solid white; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
-    <span style="transform: rotate(45deg); color: white; font-weight: bold; font-size: 14px;">E</span>
-  </div>`;
+  const html = `<svg width="36" height="48" viewBox="0 0 36 48" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+    <defs>
+      <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/>
+      </filter>
+    </defs>
+    <path d="M 18 2 C 10.3 2 4 8.3 4 16 C 4 28 18 46 18 46 C 18 46 32 28 32 16 C 32 8.3 25.7 2 18 2 Z" fill="#3498db" stroke="white" stroke-width="2.5"/>
+    <circle cx="18" cy="16" r="6" fill="white" opacity="0.9"/>
+  </svg>`;
 
   if (_testMarker) _locationLayer.removeLayer(_testMarker);
   _testMarker = L.marker([lat, lng], {
-    icon: L.divIcon({ html, iconSize: [32, 40], iconAnchor: [16, 40], className: 'location-pin' })
+    icon: L.divIcon({ html, iconSize: [36, 48], iconAnchor: [18, 48], className: 'location-pin' })
   }).addTo(_locationLayer);
 
   console.log("Pin adicionado com sucesso!");
