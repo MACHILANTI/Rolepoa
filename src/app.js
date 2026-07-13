@@ -119,6 +119,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setupModalClose();
 });
 
+window.addEventListener("beforeunload", stopLocationTracking);
+
 // ===== SEÇÕES DO APP =====
 // STATE: variáveis globais (linhas ~63-70)
 // API (Supabase): sincronização e armazenamento na nuvem (linhas ~258-355)
@@ -579,6 +581,12 @@ let _map = null;
 let _markers = {};          // id -> marker
 let _markerLayer = null;
 let _locationLayer = null;  // Layer separado para pins de localização
+let _currentSessionId = Math.random().toString(36).substring(7);
+let _geoLocationWatcher = null;
+let _locationSubscription = null;
+let _lastLocationUpdate = 0;
+let _userLocationMarker = null;
+let _otherUsersMarkers = {};
 
 function setView(view) {
   currentView = view;
@@ -588,7 +596,7 @@ function setView(view) {
     b.classList.toggle("active", b.dataset.view === view));
   if (view === "map") {
     if (!initMap()) return;
-    // O mapa estava escondido; precisa recalcular o tamanho.
+    startLocationTracking();
     setTimeout(() => { _map.invalidateSize(); render(); }, DELAY_MAP_RENDER);
   }
 }
@@ -638,6 +646,71 @@ function addLocationPin(lat, lng, label, color) {
 
 function clearLocationPins() {
   if (_locationLayer) _locationLayer.clearLayers();
+}
+
+function startLocationTracking() {
+  if (!navigator.geolocation) return;
+  _geoLocationWatcher = navigator.geolocation.watchPosition(
+    (pos) => updateUserLocation(pos.coords.latitude, pos.coords.longitude),
+    (err) => console.warn("Geolocation error:", err),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+  subscribeToLocations();
+}
+
+function updateUserLocation(lat, lng) {
+  const now = Date.now();
+  if (now - _lastLocationUpdate < 3000) return;
+  _lastLocationUpdate = now;
+
+  const client = sb();
+  if (!client) return;
+
+  client.from("active_users").upsert(
+    { session_id: _currentSessionId, lat, lng, updated_at: new Date() },
+    { onConflict: "session_id" }
+  ).catch(e => console.warn("Location update error:", e));
+
+  if (_userLocationMarker) clearLocationPins();
+  _userLocationMarker = addLocationPin(lat, lng, "Eu", "3498db");
+}
+
+function subscribeToLocations() {
+  const client = sb();
+  if (!client) return;
+
+  _locationSubscription = client
+    .from("active_users")
+    .on("*", (payload) => {
+      const { session_id, lat, lng } = payload;
+      if (session_id === _currentSessionId) return;
+
+      if (payload.eventType === "DELETE" || !lat || !lng) {
+        if (_otherUsersMarkers[session_id]) {
+          _map.removeLayer(_otherUsersMarkers[session_id]);
+          delete _otherUsersMarkers[session_id];
+        }
+        return;
+      }
+
+      if (_otherUsersMarkers[session_id]) {
+        _map.removeLayer(_otherUsersMarkers[session_id]);
+      }
+
+      _otherUsersMarkers[session_id] = addLocationPin(lat, lng, "OP", "e74c3c");
+    })
+    .subscribe();
+}
+
+function stopLocationTracking() {
+  if (_geoLocationWatcher) navigator.geolocation.clearWatch(_geoLocationWatcher);
+  if (_locationSubscription) _locationSubscription.unsubscribe();
+  clearLocationPins();
+
+  const client = sb();
+  if (client) {
+    client.from("active_users").delete().eq("session_id", _currentSessionId).catch(() => {});
+  }
 }
 
 function renderMapMarkers(list) {
