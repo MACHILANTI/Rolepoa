@@ -128,6 +128,59 @@ window.addEventListener("beforeunload", () => {
   }
 });
 
+async function regeneratePhotoUrls() {
+  if (!confirm("Isso vai regenerar as URLs das fotos do Google Places. Continuar?")) return;
+
+  const client = sb();
+  if (!client) {
+    toast("Erro ao conectar Supabase", "error");
+    return;
+  }
+
+  toast("Buscando fotos do Google... isso pode levar alguns minutos", "info");
+
+  let updated = 0;
+  let failed = 0;
+
+  for (const r of restaurants) {
+    try {
+      const res = await fetch(`https://places.googleapis.com/v1/places:searchText`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": getGoogleKey(),
+        },
+        body: JSON.stringify({
+          textQuery: `${r.name} Porto Alegre`,
+          maxResultCount: 1,
+          fields: ["places.photos"],
+        }),
+      });
+
+      if (!res.ok) { failed++; continue; }
+
+      const data = await res.json();
+      const placePhoto = data.places?.[0]?.photos?.[0];
+
+      if (placePhoto?.name) {
+        const newUrl = placePhoto.name + `/media?maxWidthPx=900&key=${getGoogleKey()}`;
+        if (newUrl !== r.photo) {
+          r.photo = newUrl;
+          await client.from("places").update({ data: r }).eq("id", r.id);
+          updated++;
+        }
+      }
+    } catch (e) {
+      failed++;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+  }
+
+  toast(`✅ ${updated} fotos atualizadas! (${failed} erros)`, "success");
+  render();
+}
+
 // ===== SEÇÕES DO APP =====
 // STATE: variáveis globais (linhas ~63-70)
 // API (Supabase): sincronização e armazenamento na nuvem (linhas ~258-355)
