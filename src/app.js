@@ -152,10 +152,10 @@ async function regeneratePhotoUrls() {
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": googleKey,
-          "X-Goog-FieldMask": "places.photos",
+          "X-Goog-FieldMask": "places.photos,places.displayName",
         },
         body: JSON.stringify({
-          textQuery: `${r.name} Porto Alegre`,
+          textQuery: `${r.name} Porto Alegre Brazil`,
           maxResultCount: 1,
         }),
       });
