@@ -128,6 +128,73 @@ window.addEventListener("beforeunload", () => {
   }
 });
 
+async function updatePhotoFromGoogle(id) {
+  const r = restaurants.find(x => x.id === id);
+  if (!r) return;
+
+  toast("⏳ Buscando foto do Google...", "info");
+
+  const client = sb();
+  if (!client) {
+    toast("Erro ao conectar Supabase", "error");
+    return;
+  }
+
+  try {
+    const res = await fetch(`https://places.googleapis.com/v1/places:searchText`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": getGoogleKey(),
+        "X-Goog-FieldMask": "places.photos,places.displayName",
+      },
+      body: JSON.stringify({
+        textQuery: `${r.name} Porto Alegre Brazil`,
+        maxResultCount: 1,
+      }),
+    });
+
+    if (!res.ok) { toast("Erro ao buscar foto", "error"); return; }
+
+    const data = await res.json();
+    const photoRef = data.places?.[0]?.photos?.[0];
+
+    if (!photoRef?.name) {
+      toast("Nenhuma foto encontrada no Google", "warning");
+      return;
+    }
+
+    const photoUrl = `${photoRef.name}/media?maxWidthPx=900&key=${getGoogleKey()}`;
+    const imgRes = await fetch(photoUrl);
+
+    if (!imgRes.ok) { toast("Erro ao baixar imagem", "error"); return; }
+
+    const blob = await imgRes.blob();
+    const ext = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "jpg";
+    const path = `google-photos/${r.id}-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await client.storage
+      .from("photos")
+      .upload(path, blob, { upsert: true, contentType: blob.type });
+
+    if (uploadError) { toast("Erro ao salvar imagem", "error"); return; }
+
+    const { data: publicUrlData } = client.storage.from("photos").getPublicUrl(path);
+    const storageUrl = publicUrlData?.publicUrl;
+
+    if (storageUrl) {
+      r.photo = storageUrl;
+      await client.from("places").update({ data: r }).eq("id", r.id);
+      toast("✅ Foto atualizada e salva!", "success");
+      render();
+      openDetailModal(id);
+    }
+  } catch (e) {
+    console.error("Erro:", e);
+    toast(`❌ Erro: ${e.message}`, "error");
+  }
+}
+
 async function regeneratePhotoUrls() {
   if (!confirm("Vai buscar as fotos dos restaurantes do Google Places. Pode levar alguns minutos. Continue?")) return;
 
@@ -2279,6 +2346,7 @@ function openDetailModal(id, focusRating) {
       <div class="hero-edit">
         <button type="button" class="hero-edit-btn" onclick="toggleReposition('${r.id}')" title="Reposicionar a foto">↕ Ajustar</button>
         <button type="button" class="hero-edit-btn" onclick="replaceCoverPhoto('${r.id}')" title="Trocar a foto">🖼️ Trocar</button>
+        <button type="button" class="hero-edit-btn" onclick="updatePhotoFromGoogle('${r.id}')" title="Buscar foto do Google">🔄 Foto</button>
         <button type="button" class="hero-edit-btn" onclick="replaceLogo('${r.id}')" title="Trocar o logo">🏷️ Logo</button>
       </div>
       <div class="hero-hint" id="hero-hint" style="display:none;">Arraste a foto pra enquadrar · toque em “Salvar”</div>
