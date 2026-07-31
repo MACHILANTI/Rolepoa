@@ -129,7 +129,7 @@ window.addEventListener("beforeunload", () => {
 });
 
 async function regeneratePhotoUrls() {
-  if (!confirm("Isso vai baixar e armazenar as fotos no servidor. Continuar? (pode levar vários minutos)")) return;
+  if (!confirm("Vai buscar as fotos dos restaurantes do Google Places. Pode levar alguns minutos. Continue?")) return;
 
   const client = sb();
   if (!client) {
@@ -137,7 +137,7 @@ async function regeneratePhotoUrls() {
     return;
   }
 
-  toast("⏳ Iniciando regeneração de fotos... isso pode levar 5-10 minutos", "info");
+  toast("⏳ Buscando fotos do Google Places...", "info");
 
   let updated = 0;
   let failed = 0;
@@ -147,12 +147,12 @@ async function regeneratePhotoUrls() {
     const r = restaurants[i];
 
     try {
-      // Buscar no Google Places
-      const searchRes = await fetch(`https://places.googleapis.com/v1/places:searchText`, {
+      const res = await fetch(`https://places.googleapis.com/v1/places:searchText`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": googleKey,
+          "X-Goog-FieldMask": "places.photos",
         },
         body: JSON.stringify({
           textQuery: `${r.name} Porto Alegre`,
@@ -160,53 +160,33 @@ async function regeneratePhotoUrls() {
         }),
       });
 
-      if (!searchRes.ok) { failed++; continue; }
+      if (!res.ok) { failed++; continue; }
 
-      const searchData = await searchRes.json();
-      const photoRef = searchData.places?.[0]?.photos?.[0];
+      const data = await res.json();
+      const photoRef = data.places?.[0]?.photos?.[0]?.name;
 
-      if (!photoRef?.name) { failed++; continue; }
-
-      // Baixar a imagem do Google
-      const photoUrl = photoRef.name + `/media?maxWidthPx=900&key=${googleKey}`;
-      const imgRes = await fetch(photoUrl);
-
-      if (!imgRes.ok) { failed++; continue; }
-
-      const blob = await imgRes.blob();
-      const ext = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "jpg";
-      const path = `google-photos/${r.id}-${Date.now()}.${ext}`;
-
-      // Upload pro Supabase Storage
-      const { error: uploadError } = await client.storage
-        .from("photos")
-        .upload(path, blob, { upsert: true, contentType: blob.type });
-
-      if (uploadError) { failed++; continue; }
-
-      // Pegar URL pública
-      const { data: publicUrlData } = client.storage.from("photos").getPublicUrl(path);
-      const storageUrl = publicUrlData?.publicUrl;
-
-      if (storageUrl) {
-        r.photo = storageUrl;
-        await client.from("places").update({ data: r }).eq("id", r.id);
-        updated++;
-        console.log(`✅ ${r.name}: foto armazenada`);
+      if (photoRef) {
+        const photoUrl = `${photoRef}/media?maxWidthPx=900&key=${googleKey}`;
+        if (photoUrl !== r.photo) {
+          r.photo = photoUrl;
+          await client.from("places").update({ data: r }).eq("id", r.id);
+          updated++;
+          console.log(`✅ ${r.name}: foto atualizada`);
+        }
+      } else {
+        failed++;
       }
     } catch (e) {
-      console.warn(`⚠️ ${r.name}:`, e.message);
       failed++;
     }
 
-    // Rate limit + feedback visual
     if (i % 5 === 0) {
-      toast(`⏳ Processando... ${updated}/${restaurants.length}`, "info");
+      toast(`⏳ Processando ${i}/${restaurants.length}...`, "info");
     }
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  toast(`✅ Feito! ${updated} fotos armazenadas, ${failed} falharam`, "success");
+  toast(`✅ ${updated} fotos atualizadas! (${failed} sem foto)`, "success");
   render();
 }
 
