@@ -157,7 +157,6 @@ async function regeneratePhotoUrls() {
         body: JSON.stringify({
           textQuery: `${r.name} Porto Alegre`,
           maxResultCount: 1,
-          fields: ["places.photos"],
         }),
       });
 
