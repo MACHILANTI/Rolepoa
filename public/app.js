@@ -242,7 +242,7 @@ async function regeneratePhotoUrls() {
     return;
   }
 
-  toast("⏳ Buscando fotos do Google Places...", "info");
+  toast("⏳ Iniciando... isso pode levar 2-3 minutos", "info");
 
   let updated = 0;
   let failed = 0;
@@ -257,7 +257,7 @@ async function regeneratePhotoUrls() {
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": googleKey,
-          "X-Goog-FieldMask": "places.photos,places.displayName",
+          "X-Goog-FieldMask": "places.photos",
         },
         body: JSON.stringify({
           textQuery: `${r.name} Porto Alegre Brazil`,
@@ -270,28 +270,45 @@ async function regeneratePhotoUrls() {
       const data = await res.json();
       const photoRef = data.places?.[0]?.photos?.[0]?.name;
 
-      if (photoRef) {
-        const photoUrl = `${photoRef}/media?maxWidthPx=900&key=${googleKey}`;
-        if (photoUrl !== r.photo) {
-          r.photo = photoUrl;
-          await client.from("places").update({ data: r }).eq("id", r.id);
-          updated++;
-          console.log(`✅ ${r.name}: foto atualizada`);
-        }
-      } else {
-        failed++;
+      if (!photoRef) { failed++; continue; }
+
+      // Baixar a imagem
+      const photoUrl = `${photoRef}/media?maxWidthPx=900&key=${googleKey}`;
+      const imgRes = await fetch(photoUrl);
+      if (!imgRes.ok) { failed++; continue; }
+
+      const blob = await imgRes.blob();
+      const ext = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "jpg";
+      const path = `google-photos/${r.id}-${Date.now()}.${ext}`;
+
+      // Upload pro Supabase Storage
+      const { error: uploadError } = await client.storage
+        .from("photos")
+        .upload(path, blob, { upsert: true, contentType: blob.type });
+
+      if (uploadError) { failed++; continue; }
+
+      // Pegar URL permanente
+      const { data: publicUrlData } = client.storage.from("photos").getPublicUrl(path);
+      const storageUrl = publicUrlData?.publicUrl;
+
+      if (storageUrl) {
+        r.photo = storageUrl;
+        await client.from("places").update({ data: r }).eq("id", r.id);
+        updated++;
+        console.log(`✅ ${r.name}: foto salva`);
       }
     } catch (e) {
       failed++;
     }
 
-    if (i % 5 === 0) {
-      toast(`⏳ Processando ${i}/${restaurants.length}...`, "info");
+    if (i % 10 === 0) {
+      toast(`⏳ ${i}/${restaurants.length}... (${updated} salvas)`, "info");
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 150));
   }
 
-  toast(`✅ ${updated} fotos atualizadas! (${failed} sem foto)`, "success");
+  toast(`✅ ${updated} fotos salvas permanentemente! (${failed} sem foto)`, "success");
   render();
 }
 
