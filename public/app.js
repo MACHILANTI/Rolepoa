@@ -242,7 +242,16 @@ async function regeneratePhotoUrls() {
     return;
   }
 
-  toast("⏳ Iniciando... isso pode levar 2-3 minutos", "info");
+  // Criar modal com barra de progresso
+  const progressHTML = `<div id="progress-modal" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(18,14,11,0.95); border: 2px solid #f5a623; border-radius: 12px; padding: 30px; z-index: 10000; min-width: 300px; text-align: center;"><div style="color: #f5a623; font-weight: bold; margin-bottom: 15px; font-size: 16px;">📸 Salvando fotos</div><div id="progress-bar" style="width: 100%; height: 24px; background: rgba(245,166,35,0.2); border: 1px solid #f5a623; border-radius: 12px; overflow: hidden; margin-bottom: 15px;"><div id="progress-fill" style="height: 100%; width: 0%; background: linear-gradient(90deg, #f5a623, #e5a010); transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: #120e0b; font-size: 12px; font-weight: bold;"></div></div><div id="progress-text" style="color: #ccc; font-size: 14px;">0/${restaurants.length}</div></div>`;
+  document.body.insertAdjacentHTML('beforeend', progressHTML);
+  function updateProgress(current) {
+    const percent = Math.round((current / restaurants.length) * 100);
+    const fill = document.getElementById("progress-fill");
+    const text = document.getElementById("progress-text");
+    if (fill) { fill.style.width = percent + "%"; fill.textContent = percent + "%"; }
+    if (text) text.textContent = `${current}/${restaurants.length}`;
+  }
 
   let updated = 0;
   let failed = 0;
@@ -302,11 +311,13 @@ async function regeneratePhotoUrls() {
       failed++;
     }
 
-    if (i % 10 === 0) {
-      toast(`⏳ ${i}/${restaurants.length}... (${updated} salvas)`, "info");
-    }
+    updateProgress(i + 1);
     await new Promise(resolve => setTimeout(resolve, 150));
   }
+
+  // Remover modal de progresso
+  const modal = document.getElementById("progress-modal");
+  if (modal) modal.remove();
 
   toast(`✅ ${updated} fotos salvas permanentemente! (${failed} sem foto)`, "success");
   render();
