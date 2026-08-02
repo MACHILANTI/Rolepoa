@@ -278,37 +278,33 @@ async function regeneratePhotoUrls() {
       if (!res.ok) { failed++; continue; }
 
       const data = await res.json();
-      const photoUrl = data.places?.[0]?.photos?.[0]?.name + `/media?maxWidthPx=900&key=${googleKey}`;
+      const photoRef = data.places?.[0]?.photos?.[0]?.name;
 
-      if (!photoUrl) { failed++; continue; }
+      if (!photoRef) { failed++; continue; }
 
-      // Baixar a imagem (MESMO MÉTODO que quando usuário seleciona)
+      // Pegar a PRIMEIRA foto (como o usuário faria)
+      const photoUrl = `${photoRef}/media?maxWidthPx=900&key=${googleKey}`;
       const imgRes = await fetch(photoUrl);
       if (!imgRes.ok) { failed++; continue; }
 
-      const dataUrl = await imgRes.blob().then(blob => {
-        return new Promise(resolve => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-      });
-
-      // Salvar IGUAL quando o usuário faz manualmente (uploadPhoto method)
-      const blob = await (await fetch(dataUrl)).blob();
+      const blob = await imgRes.blob();
       const ext = (blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
-      const path = `user-photos/${r.id}-${Date.now()}.${ext}`;
+      const path = `google-photos/${r.id}-${Date.now()}.${ext}`;
 
+      // Upload pro Supabase
       const { error } = await client.storage.from("photos").upload(path, blob, { contentType: blob.type, upsert: false });
       if (error) { failed++; continue; }
 
+      // Pegar URL e SALVAR (mantendo Instagram igual!)
       const { data: urlData } = client.storage.from("photos").getPublicUrl(path);
       const newUrl = urlData.publicUrl;
 
       if (newUrl) {
+        // Atualizar APENAS a foto, deixando tudo mais igual (Instagram, website, etc)
         r.photo = newUrl;
         await client.from("places").update({ data: r }).eq("id", r.id);
         updated++;
+        console.log(`✅ ${r.name}: foto atualizada (Instagram: ${r.instagram})`);
       }
     } catch (e) {
       failed++;
