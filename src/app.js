@@ -243,7 +243,7 @@ async function regeneratePhotoUrls() {
   }
 
   // Criar modal com barra de progresso
-  const progressHTML = `<div id="progress-modal" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(18,14,11,0.95); border: 2px solid #f5a623; border-radius: 12px; padding: 30px; z-index: 10000; min-width: 300px; text-align: center;"><div style="color: #f5a623; font-weight: bold; margin-bottom: 15px; font-size: 16px;">📸 Salvando fotos</div><div id="progress-bar" style="width: 100%; height: 24px; background: rgba(245,166,35,0.2); border: 1px solid #f5a623; border-radius: 12px; overflow: hidden; margin-bottom: 15px;"><div id="progress-fill" style="height: 100%; width: 0%; background: linear-gradient(90deg, #f5a623, #e5a010); transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: #120e0b; font-size: 12px; font-weight: bold;"></div></div><div id="progress-text" style="color: #ccc; font-size: 14px;">0/${restaurants.length}</div></div>`;
+  const progressHTML = `<div id="progress-modal" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(18,14,11,0.95); border: 2px solid #f5a623; border-radius: 12px; padding: 30px; z-index: 10000; min-width: 300px; text-align: center;"><div style="color: #f5a623; font-weight: bold; margin-bottom: 15px; font-size: 16px;">📸 Atualizando fotos</div><div id="progress-bar" style="width: 100%; height: 24px; background: rgba(245,166,35,0.2); border: 1px solid #f5a623; border-radius: 12px; overflow: hidden; margin-bottom: 15px;"><div id="progress-fill" style="height: 100%; width: 0%; background: linear-gradient(90deg, #f5a623, #e5a010); transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: #120e0b; font-size: 12px; font-weight: bold;"></div></div><div id="progress-text" style="color: #ccc; font-size: 14px;">0/${restaurants.length}</div></div>`;
   document.body.insertAdjacentHTML('beforeend', progressHTML);
   function updateProgress(current) {
     const percent = Math.round((current / restaurants.length) * 100);
@@ -261,6 +261,7 @@ async function regeneratePhotoUrls() {
     const r = restaurants[i];
 
     try {
+      // Buscar no Google (MESMO MÉTODO que Smart Search)
       const res = await fetch(`https://places.googleapis.com/v1/places:searchText`, {
         method: "POST",
         headers: {
@@ -277,42 +278,44 @@ async function regeneratePhotoUrls() {
       if (!res.ok) { failed++; continue; }
 
       const data = await res.json();
-      const photoRef = data.places?.[0]?.photos?.[0]?.name;
+      const photoUrl = data.places?.[0]?.photos?.[0]?.name + `/media?maxWidthPx=900&key=${googleKey}`;
 
-      if (!photoRef) { failed++; continue; }
+      if (!photoUrl) { failed++; continue; }
 
-      // Baixar a imagem
-      const photoUrl = `${photoRef}/media?maxWidthPx=900&key=${googleKey}`;
+      // Baixar a imagem (MESMO MÉTODO que quando usuário seleciona)
       const imgRes = await fetch(photoUrl);
       if (!imgRes.ok) { failed++; continue; }
 
-      const blob = await imgRes.blob();
-      const ext = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "jpg";
-      const path = `google-photos/${r.id}-${Date.now()}.${ext}`;
+      const dataUrl = await imgRes.blob().then(blob => {
+        return new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      });
 
-      // Upload pro Supabase Storage
-      const { error: uploadError } = await client.storage
-        .from("photos")
-        .upload(path, blob, { upsert: true, contentType: blob.type });
+      // Salvar IGUAL quando o usuário faz manualmente (uploadPhoto method)
+      const blob = await (await fetch(dataUrl)).blob();
+      const ext = (blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
+      const path = `user-photos/${r.id}-${Date.now()}.${ext}`;
 
-      if (uploadError) { failed++; continue; }
+      const { error } = await client.storage.from("photos").upload(path, blob, { contentType: blob.type, upsert: false });
+      if (error) { failed++; continue; }
 
-      // Pegar URL permanente
-      const { data: publicUrlData } = client.storage.from("photos").getPublicUrl(path);
-      const storageUrl = publicUrlData?.publicUrl;
+      const { data: urlData } = client.storage.from("photos").getPublicUrl(path);
+      const newUrl = urlData.publicUrl;
 
-      if (storageUrl) {
-        r.photo = storageUrl;
+      if (newUrl) {
+        r.photo = newUrl;
         await client.from("places").update({ data: r }).eq("id", r.id);
         updated++;
-        console.log(`✅ ${r.name}: foto salva`);
       }
     } catch (e) {
       failed++;
     }
 
     updateProgress(i + 1);
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
 
   // Remover modal de progresso
