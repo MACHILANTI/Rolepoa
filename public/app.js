@@ -128,17 +128,16 @@ window.addEventListener("beforeunload", () => {
   }
 });
 
+let _updatePhotoId = null;
+let _updatePhotoUrls = [];
+
 async function updatePhotoFromGoogle(id) {
   const r = restaurants.find(x => x.id === id);
   if (!r) return;
 
-  toast("⏳ Buscando foto do Google...", "info");
-
-  const client = sb();
-  if (!client) {
-    toast("Erro ao conectar Supabase", "error");
-    return;
-  }
+  toast("⏳ Buscando fotos no Google...", "info");
+  _updatePhotoId = id;
+  _updatePhotoUrls = [];
 
   try {
     const res = await fetch(`https://places.googleapis.com/v1/places:searchText`, {
@@ -146,7 +145,7 @@ async function updatePhotoFromGoogle(id) {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": getGoogleKey(),
-        "X-Goog-FieldMask": "places.photos,places.displayName",
+        "X-Goog-FieldMask": "places.photos",
       },
       body: JSON.stringify({
         textQuery: `${r.name} Porto Alegre Brazil`,
@@ -157,16 +156,47 @@ async function updatePhotoFromGoogle(id) {
     if (!res.ok) { toast("Erro ao buscar foto", "error"); return; }
 
     const data = await res.json();
-    const photoRef = data.places?.[0]?.photos?.[0];
+    const photos = data.places?.[0]?.photos || [];
 
-    if (!photoRef?.name) {
+    if (photos.length === 0) {
       toast("Nenhuma foto encontrada no Google", "warning");
       return;
     }
 
-    const photoUrl = `${photoRef.name}/media?maxWidthPx=900&key=${getGoogleKey()}`;
-    const imgRes = await fetch(photoUrl);
+    _updatePhotoUrls = photos.map(p => `${p.name}/media?maxWidthPx=900&key=${getGoogleKey()}`);
 
+    const thumbsHtml = _updatePhotoUrls.map((url, i) =>
+      `<button type="button" class="cover-thumb ${i === 0 ? 'sel' : ''}" style="background-image:url('${escapeAttr(url)}')" onclick="selectPhotoToUpdate(${i})" title="Clique para selecionar"></button>`
+    ).join("");
+
+    document.getElementById("smart-confirm").innerHTML = `
+      <div class="confirm-card">
+        <div class="confirm-head">📸 Selecione a foto que deseja usar</div>
+        <div class="cover-pick" style="margin: 20px 0;">
+          ${thumbsHtml}
+        </div>
+      </div>`;
+
+    toast("✅ Clique na foto que deseja usar", "success");
+  } catch (e) {
+    console.error("Erro:", e);
+    toast(`❌ Erro: ${e.message}`, "error");
+  }
+}
+
+async function selectPhotoToUpdate(photoIndex) {
+  const id = _updatePhotoId;
+  const r = restaurants.find(x => x.id === id);
+  if (!r || !_updatePhotoUrls[photoIndex]) return;
+
+  toast("⏳ Salvando foto...", "info");
+
+  const client = sb();
+  if (!client) { toast("Erro ao conectar", "error"); return; }
+
+  try {
+    const photoUrl = _updatePhotoUrls[photoIndex];
+    const imgRes = await fetch(photoUrl);
     if (!imgRes.ok) { toast("Erro ao baixar imagem", "error"); return; }
 
     const blob = await imgRes.blob();
@@ -177,7 +207,7 @@ async function updatePhotoFromGoogle(id) {
       .from("photos")
       .upload(path, blob, { upsert: true, contentType: blob.type });
 
-    if (uploadError) { toast("Erro ao salvar imagem", "error"); return; }
+    if (uploadError) { toast("Erro ao salvar", "error"); return; }
 
     const { data: publicUrlData } = client.storage.from("photos").getPublicUrl(path);
     const storageUrl = publicUrlData?.publicUrl;
@@ -185,12 +215,12 @@ async function updatePhotoFromGoogle(id) {
     if (storageUrl) {
       r.photo = storageUrl;
       await client.from("places").update({ data: r }).eq("id", r.id);
-      toast("✅ Foto atualizada e salva!", "success");
+      document.getElementById("smart-confirm").innerHTML = "";
+      toast("✅ Foto salva permanentemente!", "success");
       render();
       openDetailModal(id);
     }
   } catch (e) {
-    console.error("Erro:", e);
     toast(`❌ Erro: ${e.message}`, "error");
   }
 }
