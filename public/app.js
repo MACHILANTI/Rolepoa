@@ -165,19 +165,27 @@ async function updatePhotoFromGoogle(id) {
 
     _updatePhotoUrls = photos.map(p => `${p.name}/media?maxWidthPx=900&key=${getGoogleKey()}`);
 
+    if (_updatePhotoUrls.length === 1) {
+      selectPhotoToUpdate(0);
+      return;
+    }
+
     const thumbsHtml = _updatePhotoUrls.map((url, i) =>
-      `<button type="button" class="cover-thumb ${i === 0 ? 'sel' : ''}" style="background-image:url('${escapeAttr(url)}')" onclick="selectPhotoToUpdate(${i})" title="Clique para selecionar"></button>`
+      `<div class="cover-thumb" onclick="selectPhotoToUpdate(${i})" title="Clique para selecionar" style="cursor: pointer; position: relative; width: 80px; height: 80px; border: 2px solid ${i === 0 ? '#f5a623' : 'transparent'}; border-radius: 8px; overflow: hidden; margin: 5px;">
+        <img src="${escapeAttr(url)}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.textContent='❌'">
+      </div>`
     ).join("");
 
     document.getElementById("smart-confirm").innerHTML = `
       <div class="confirm-card">
         <div class="confirm-head">📸 Selecione a foto que deseja usar</div>
-        <div class="cover-pick" style="margin: 20px 0;">
+        <div class="cover-pick" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px;">
           ${thumbsHtml}
         </div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 10px;">Clique em uma foto para selecionar</div>
       </div>`;
 
-    toast("✅ Clique na foto que deseja usar", "success");
+    toast("✅ Escolha a foto clicando nela", "success");
   } catch (e) {
     console.error("Erro:", e);
     toast(`❌ Erro: ${e.message}`, "error");
