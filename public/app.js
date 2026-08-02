@@ -283,7 +283,7 @@ async function regeneratePhotoUrls() {
       if (!photoRef) { failed++; continue; }
 
       // Pegar a PRIMEIRA foto (como o usuário faria)
-      const photoUrl = `${photoRef}/media?maxWidthPx=900&key=${googleKey}`;
+      const photoUrl = `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=900&key=${googleKey}`;
       const imgRes = await fetch(photoUrl);
       if (!imgRes.ok) { failed++; continue; }
 
